@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import ThirdParty, { Google } from "supertokens-auth-react/recipe/thirdparty";
@@ -25,7 +25,7 @@ export const SuperTokensConfig = {
     apiDomain: "http://localhost:8080",
     websiteDomain: "http://localhost:3000",
     apiBasePath: "/api/auth",
-    websiteBasePath: "/auth",
+    websiteBasePath: "/login",
   },
   recipeList: [
     EmailPassword.init(),
