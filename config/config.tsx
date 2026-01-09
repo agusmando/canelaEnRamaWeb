@@ -25,7 +25,7 @@ export const SuperTokensConfig = {
     apiDomain: "http://localhost:8080",
     websiteDomain: "http://localhost:3000",
     apiBasePath: "/api/auth",
-    websiteBasePath: "/login",
+    websiteBasePath: "/auth",
   },
   recipeList: [
     EmailPassword.init(),

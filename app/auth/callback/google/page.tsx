@@ -4,8 +4,9 @@ async function handleGoogleCallback() {
   try {
     const response = await signInAndUp();
 
+
+    console.log(response);
     if (response.status === "OK") {
-      console.log(response.user);
       if (
         response.createdNewRecipeUser &&
         response.user.loginMethods.length === 1
