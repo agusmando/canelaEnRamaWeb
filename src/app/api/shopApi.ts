@@ -1,6 +1,8 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { axiosBaseQuery, request, toApiError, type QueryError } from './client';
 import type {
+  Banner,
+  BannerPlacement,
   Cart,
   CartLineInput,
   Brand,
@@ -10,6 +12,14 @@ import type {
   Paginated,
   PaymentType,
   Product,
+  PublicTracking,
+  Review,
+  ReviewEligibility,
+  ReviewInput,
+  ReviewQuery,
+  ReviewSummary,
+  Shipment,
+  GoogleReviews,
   Tag,
 } from './types';
 
@@ -22,6 +32,11 @@ import type {
  *   POST /cart · GET /cart/me · GET|PUT /cart/:token   carrito de invitado o usuario
  *   POST /order {fromCart}                checkout
  *   GET  /order/mine · GET|PUT /order/:id mis pedidos / cancelar
+ *   GET  /banner/public?placement=        banners administrables (hero, recomendaciones, tiras, anuncio)
+ *   GET  /google-review                   puntaje del local y reseñas destacadas de Google
+ *   GET  /review · /review/summary        opiniones aprobadas de un producto
+ *   GET  /review/eligible · /review/mine · POST|PUT|DELETE /review   opinar sobre lo comprado
+ *   GET  /shipment/order/:orderId · /shipment/track/:code             seguimiento de envíos
  */
 
 // ---------------------------------------------------------------- Carrito: a quién pertenece
@@ -82,7 +97,7 @@ export interface CartUpdate {
 export const shopApi = createApi({
   reducerPath: 'shopApi',
   baseQuery: axiosBaseQuery,
-  tagTypes: ['Catalog', 'Product', 'Category', 'Tag', 'Brand', 'Cart', 'Order'],
+  tagTypes: ['Catalog', 'Product', 'Category', 'Tag', 'Brand', 'Cart', 'Order', 'Banner', 'GoogleReview', 'Review', 'Shipment'],
   keepUnusedDataFor: 300,
   refetchOnReconnect: true,
   endpoints: (build) => ({
@@ -244,6 +259,105 @@ export const shopApi = createApi({
       query: (id) => ({ url: `/order/${id}`, method: 'PUT', data: { status: 'CANCELLED' } }),
       invalidatesTags: (_r, error, id) => (error ? [] : ['Order', { type: 'Order', id }, 'Catalog', 'Product']),
     }),
+
+    // ------------------------------------------------------------ Envíos
+
+    /** Envío de un pedido propio. Sin envío (404) → `null`. */
+    orderShipment: build.query<Shipment | null, Id>({
+      queryFn: async (orderId) => {
+        try {
+          return { data: await request<Shipment>({ url: `/shipment/order/${orderId}` }) };
+        } catch (e) {
+          const err = toApiError(e);
+          if (err.status === 404) return { data: null };
+          return { error: asError(err) };
+        }
+      },
+      providesTags: (_r, _e, orderId) => [{ type: 'Shipment', id: orderId }],
+    }),
+
+    /** Seguimiento público por código (404 si no existe). */
+    trackShipment: build.query<PublicTracking, string>({
+      query: (code) => ({ url: `/shipment/track/${encodeURIComponent(code)}` }),
+      providesTags: (_r, _e, code) => [{ type: 'Shipment', id: code }],
+      keepUnusedDataFor: 60,
+    }),
+
+    // ------------------------------------------------------------ Banners y reseñas de Google
+
+    /** Banners activos de una ubicación, ordenados por posición. */
+    banners: build.query<Banner[], BannerPlacement>({
+      query: (placement) => ({ url: '/banner/public', params: { placement } }),
+      transformResponse: (raw: Banner[] | Paginated<Banner>) =>
+        (Array.isArray(raw) ? raw : raw?.content ?? []).slice().sort((a, b) => a.position - b.position || a.id - b.id),
+      providesTags: (_r, _e, placement) => [{ type: 'Banner', id: placement }],
+      keepUnusedDataFor: 900,
+    }),
+
+    googleReviews: build.query<GoogleReviews, void>({
+      query: () => ({ url: '/google-review' }),
+      transformResponse: (raw: GoogleReviews) => ({
+        place: raw?.place ?? null,
+        reviews: (raw?.reviews ?? []).filter((r) => r.active !== false),
+      }) as GoogleReviews,
+      providesTags: ['GoogleReview'],
+      keepUnusedDataFor: 900,
+    }),
+
+    // ------------------------------------------------------------ Opiniones de productos
+
+    /** Una página de opiniones aprobadas de un producto. */
+    reviews: build.query<Paginated<Review>, ReviewQuery>({
+      query: ({ productId, productVariantId, rating, page, perPage = 5, orderBy = 'recent' }) => ({
+        url: '/review',
+        params: { productId, productVariantId, rating, orderBy, paginate: true, currentPage: page, amountPerPage: perPage },
+      }),
+      transformResponse: (raw: Paginated<Review> | Review[]) => {
+        if (Array.isArray(raw)) {
+          return { content: raw, pagination: { page: 1, amountPerPage: raw.length, totalAmount: raw.length, totalPages: 1 } };
+        }
+        const { page = 1, amountPerPage = 5, totalAmount = raw.content?.length ?? 0 } = raw.pagination ?? {};
+        return {
+          content: raw.content ?? [],
+          pagination: { page, amountPerPage, totalAmount, totalPages: Math.max(1, Math.ceil(totalAmount / (amountPerPage || 1))) },
+        };
+      },
+      providesTags: (_r, _e, q) => [{ type: 'Review', id: `product-${q.productId}` }],
+    }),
+
+    reviewSummary: build.query<ReviewSummary, Id>({
+      query: (productId) => ({ url: '/review/summary', params: { productId } }),
+      providesTags: (_r, _e, productId) => [{ type: 'Review', id: `product-${productId}` }],
+    }),
+
+    /** Variantes del producto que el usuario puede opinar (compra entregada) + su opinión si ya existe. */
+    reviewEligibility: build.query<ReviewEligibility[], Id>({
+      query: (productId) => ({ url: '/review/eligible', params: { productId } }),
+      transformResponse: (raw: ReviewEligibility[]) => (Array.isArray(raw) ? raw : []),
+      providesTags: ['Review'],
+    }),
+
+    myReviews: build.query<Review[], void>({
+      query: () => ({ url: '/review/mine' }),
+      transformResponse: (raw: Review[]) => (Array.isArray(raw) ? raw : []),
+      providesTags: ['Review'],
+    }),
+
+    createReview: build.mutation<Review, ReviewInput>({
+      query: (data) => ({ url: '/review', method: 'POST', data }),
+      invalidatesTags: (_r, error) => (error ? [] : ['Review']),
+    }),
+
+    updateReview: build.mutation<Review, { id: Id } & Omit<ReviewInput, 'productVariantId'>>({
+      query: ({ id, ...data }) => ({ url: `/review/${id}`, method: 'PUT', data }),
+      // Al editarla vuelve a PENDING: deja de mostrarse en el listado público.
+      invalidatesTags: (r, error) => (error ? [] : ['Review', ...(r ? [{ type: 'Review' as const, id: `product-${r.productId}` }] : [])]),
+    }),
+
+    deleteReview: build.mutation<void, { id: Id; productId: Id }>({
+      query: ({ id }) => ({ url: `/review/${id}`, method: 'DELETE' }),
+      invalidatesTags: (_r, error, { productId }) => (error ? [] : ['Review', { type: 'Review', id: `product-${productId}` }]),
+    }),
   }),
 });
 
@@ -260,4 +374,15 @@ export const {
   useMyOrdersQuery,
   useOrderQuery,
   useCancelOrderMutation,
+  useOrderShipmentQuery,
+  useTrackShipmentQuery,
+  useBannersQuery,
+  useGoogleReviewsQuery,
+  useReviewsQuery,
+  useReviewSummaryQuery,
+  useReviewEligibilityQuery,
+  useMyReviewsQuery,
+  useCreateReviewMutation,
+  useUpdateReviewMutation,
+  useDeleteReviewMutation,
 } = shopApi;

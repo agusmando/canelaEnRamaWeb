@@ -49,6 +49,7 @@ export function Footer() {
               ['/favoritos', 'Favoritos'],
               ['/mi-cuenta/pedidos', 'Mis pedidos'],
               ['/envios', 'Envíos y retiro'],
+              ['/seguimiento', 'Seguí tu envío'],
             ].map(([to, label]) => (
               <li key={to}>
                 <Link to={to} className="whitespace-nowrap hover:text-white hover:underline">

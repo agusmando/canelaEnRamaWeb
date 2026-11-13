@@ -5,7 +5,7 @@ import { useCartQuery } from '../api/shopApi';
 import { useAppDispatch, useAppSelector, useCartKey } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { describeQty } from '../lib/orders';
-import { formatCurrency } from '../lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 
 /** Panel lateral que confirma lo agregado y muestra el resumen del carrito. */
 export function CartDrawer() {
@@ -57,7 +57,17 @@ export function CartDrawer() {
                   <p className="truncate text-xs text-ink-500">{v.name}</p>
                   <p className="mt-1 text-xs text-ink-600">{describeQty(it.quantity, it.selectedBulkOption, v.contentMeasure)}</p>
                 </div>
-                <p className="text-sm font-semibold text-ink-800">{formatCurrency(it.quote.total)}</p>
+                <div className="shrink-0 text-right">
+                  {it.quote.discount > 0 && (
+                    <p className="text-xs text-ink-400 line-through tabular-nums">{formatCurrency(it.quote.total + it.quote.discount)}</p>
+                  )}
+                  <p className={cn('text-sm font-semibold tabular-nums', it.quote.discount > 0 ? 'text-leaf-600' : 'text-ink-800')}>
+                    {formatCurrency(it.quote.total)}
+                  </p>
+                  {it.quote.discount > 0 && it.quote.offerType && (
+                    <span className="mt-0.5 inline-block rounded-full bg-leaf-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-leaf-600">{it.quote.offerType}</span>
+                  )}
+                </div>
               </li>
             );
           })}

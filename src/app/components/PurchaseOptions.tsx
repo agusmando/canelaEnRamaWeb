@@ -10,6 +10,7 @@ import {
   priceUnitLabel,
   quote,
   stockUnit,
+  variantDeal,
 } from '../lib/shop';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { QtyStepper } from './QtyStepper';
@@ -27,10 +28,12 @@ import { QtyStepper } from './QtyStepper';
 // ---------------------------------------------------------------- Variedades
 
 export function VariantPicker({
+  product,
   variants,
   value,
   onChange,
 }: {
+  product: Product;
   variants: ProductVariant[];
   value: ProductVariant;
   onChange: (v: ProductVariant) => void;
@@ -44,6 +47,7 @@ export function VariantPicker({
         {variants.map((v) => {
           const selected = v.id === value.id;
           const available = inStock(v);
+          const deal = variantDeal(v, product);
           return (
             <button
               key={v.id}
@@ -59,9 +63,21 @@ export function VariantPicker({
               )}
             >
               <span className={cn('text-[15px] font-medium', selected ? 'text-brand-700' : 'text-ink-800', !available && 'text-ink-400')}>{v.name}</span>
-              <span className="text-xs text-ink-500">
-                {available ? `${formatCurrency(v.finalPrice)} / ${priceUnitLabel(v.contentMeasure)}` : 'Sin stock'}
-              </span>
+              {available ? (
+                <span className="flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                  <span className={cn(deal.discounted ? 'font-semibold text-leaf-600' : 'text-ink-500')}>
+                    {formatCurrency(deal.price)} / {priceUnitLabel(v.contentMeasure)}
+                  </span>
+                  {deal.discounted && <span className="text-ink-400 line-through">{formatCurrency(deal.list)}</span>}
+                </span>
+              ) : (
+                <span className="text-xs text-ink-500">Sin stock</span>
+              )}
+              {deal.badge && available && (
+                <span className="absolute -top-2.5 left-3 rounded-full bg-leaf-500 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+                  {deal.badge}
+                </span>
+              )}
               {selected && (
                 <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-brand-500 text-white">
                   <Check className="size-3" strokeWidth={3} />
@@ -190,6 +206,8 @@ export function WeightPicker({
       <div role="radiogroup" aria-label="Peso" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {presets.map((g) => {
           const selected = grams === g;
+          const q = quote(variant, null, g, product);
+          const discounted = q.list - q.total > 0.009;
           return (
             <button
               key={g}
@@ -203,7 +221,8 @@ export function WeightPicker({
               )}
             >
               <span className={cn('font-semibold', selected ? 'text-brand-700' : 'text-ink-800')}>{packLabel(g, variant.contentMeasure)}</span>
-              <span className="text-xs text-ink-500 tabular-nums">{formatCurrency(quote(variant, null, g, product).total)}</span>
+              <span className={cn('text-xs tabular-nums', discounted ? 'font-semibold text-leaf-600' : 'text-ink-500')}>{formatCurrency(q.total)}</span>
+              {discounted && <span className="text-[11px] text-ink-400 line-through tabular-nums">{formatCurrency(q.list)}</span>}
             </button>
           );
         })}

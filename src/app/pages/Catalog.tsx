@@ -4,6 +4,7 @@ import { ArrowUpDown, Check, ChevronDown, FilterX, Plus, SearchX, SlidersHorizon
 import { useBrandsQuery, useCatalogQuery, useCategoriesQuery, useTagsQuery } from '../api/shopApi';
 import type { Product } from '../api/types';
 import { getErrorMessage } from '../api/client';
+import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
@@ -172,6 +173,8 @@ export default function Catalog() {
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ label: title }]} />
+
+      <BannerStrip className="mb-6 sm:mb-8" />
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-10">
         <aside className="hidden lg:block">

@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { CalendarClock, CreditCard, MessageCircle, PackageCheck, Store, Truck } from 'lucide-react';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { TrackShipmentCta } from '../components/ShipmentTracking';
 import { CONTACT, whatsappLink } from '../lib/contact';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -30,6 +31,8 @@ export default function Shipping() {
           </li>
         ))}
       </ol>
+
+      <TrackShipmentCta className="mt-10" />
 
       <div className="mt-10 grid gap-5 md:grid-cols-2">
         <section className="rounded-xl bg-brand-50 p-6">

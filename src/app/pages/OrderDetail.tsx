@@ -1,12 +1,13 @@
 import { Link, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ArrowLeft, CalendarClock, Check, CheckCircle2, ImageOff, MessageCircle, RotateCcw, XCircle } from 'lucide-react';
-import { useAddToCartMutation, useCancelOrderMutation, useOrderQuery } from '../api/shopApi';
+import { useAddToCartMutation, useCancelOrderMutation, useOrderQuery, useOrderShipmentQuery } from '../api/shopApi';
 import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { getErrorMessage } from '../api/client';
 import { ErrorState, PageLoader, Spinner } from '../components/States';
 import { StatusBadge } from './Orders';
+import { ShipmentDetails } from '../components/ShipmentTracking';
 import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, describeQty, itemTotal, orderNumber, paymentLabel } from '../lib/orders';
 import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
@@ -19,6 +20,9 @@ export default function OrderDetail() {
   const [cancel, { isLoading: cancelling }] = useCancelOrderMutation();
   const [addToCart, { isLoading: reordering }] = useAddToCartMutation();
   const dispatch = useAppDispatch();
+  // El pedido trae `shipment` (o null si no tiene); si el backend no lo incluye, se pide aparte (404 → sin envío).
+  const { data: fetchedShipment } = useOrderShipmentQuery(id, { skip: !order || order.shipment !== undefined });
+  const shipment = order?.shipment !== undefined ? order.shipment : fetchedShipment;
   useDocumentTitle(`Pedido ${orderNumber(id)}`);
 
   if (isLoading) return <PageLoader />;
@@ -133,6 +137,8 @@ export default function OrderDetail() {
         </p>
       )}
 
+      {shipment && <ShipmentDetails data={shipment} />}
+
       <section className="rounded-xl border border-ink-200">
         <ul className="divide-y divide-ink-100">
           {items.map((it) => {
@@ -156,9 +162,21 @@ export default function OrderDetail() {
                     {it.variantNameSnapshot} · {describeQty(it.quantity, it.selectedBulkOption, it.productVariant?.contentMeasure)}
                   </p>
                   {ITEM_STATUS[it.status] && <p className="mt-0.5 text-xs font-medium text-amber-700">{ITEM_STATUS[it.status]}</p>}
-                  {it.offerTypeSnapshot && !closed && <p className="mt-0.5 text-xs font-medium text-leaf-600">Oferta {it.offerTypeSnapshot}</p>}
+                  {it.offerTypeSnapshot && !closed && (
+                    <p className="mt-0.5 text-xs font-medium text-leaf-600">
+                      Oferta {it.offerTypeSnapshot}
+                      {(it.discountAppliedSnapshot || 0) > 0 && ` · ahorraste ${formatCurrency(it.discountAppliedSnapshot)}`}
+                    </p>
+                  )}
                 </div>
-                <span className={cn('font-semibold text-ink-800 tabular-nums', closed && 'line-through')}>{formatCurrency(itemTotal(it))}</span>
+                <span className="flex shrink-0 flex-col items-end">
+                  {!closed && (it.discountAppliedSnapshot || 0) > 0 && (
+                    <span className="text-xs text-ink-400 line-through tabular-nums">{formatCurrency(itemTotal(it) + (it.discountAppliedSnapshot || 0))}</span>
+                  )}
+                  <span className={cn('font-semibold tabular-nums', closed ? 'text-ink-800 line-through' : (it.discountAppliedSnapshot || 0) > 0 ? 'text-leaf-600' : 'text-ink-800')}>
+                    {formatCurrency(itemTotal(it))}
+                  </span>
+                </span>
               </li>
             );
           })}

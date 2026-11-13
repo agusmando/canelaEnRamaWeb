@@ -188,4 +188,196 @@ export interface Order {
   estimatedReadyAt: ISODate | null;
   status: OrderStatus;
   orderItems?: OrderItem[];
+  /** Envío asociado (solo en `GET /order/:id` y `/order/mine`). */
+  shipment?: Shipment | null;
+}
+
+// ---------------------------------------------------------------- Envíos
+
+export type ShipmentMethod = 'DELIVERY' | 'PICKUP';
+export type ShipmentStatus =
+  | 'PENDING'
+  | 'PREPARING'
+  | 'READY_FOR_PICKUP'
+  | 'SHIPPED'
+  | 'OUT_FOR_DELIVERY'
+  | 'FAILED_ATTEMPT'
+  | 'DELIVERED'
+  | 'RETURNED'
+  | 'CANCELLED';
+
+export interface ShipmentEvent {
+  id: Id;
+  shipmentId: Id;
+  status: ShipmentStatus;
+  description: string | null;
+  location: string | null;
+  createdAt: ISODate;
+}
+
+export interface Shipment {
+  id: Id;
+  orderId: Id;
+  /** Código público de seguimiento, p. ej. "CER-7X4K9P2Q". */
+  trackingCode: string;
+  method: ShipmentMethod;
+  status: ShipmentStatus;
+  carrier: string | null;
+  carrierTrackingCode: string | null;
+  carrierTrackingUrl: string | null;
+  recipientName: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  postalCode: string | null;
+  notes: string | null;
+  cost: number;
+  estimatedDeliveryAt: ISODate | null;
+  shippedAt: ISODate | null;
+  deliveredAt: ISODate | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  /** Ordenados por fecha ascendente. */
+  events: ShipmentEvent[];
+}
+
+/** Seguimiento público (`GET /shipment/track/:code`): sin datos personales. */
+export interface PublicTracking {
+  trackingCode: string;
+  orderId: Id;
+  method: ShipmentMethod;
+  status: ShipmentStatus;
+  carrier: string | null;
+  carrierTrackingCode: string | null;
+  carrierTrackingUrl: string | null;
+  city: string | null;
+  estimatedDeliveryAt: ISODate | null;
+  shippedAt: ISODate | null;
+  deliveredAt: ISODate | null;
+  createdAt: ISODate;
+  events: ShipmentEvent[];
+}
+
+// ---------------------------------------------------------------- Opiniones de productos
+
+export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ReviewOrder = 'recent' | 'rating_desc' | 'rating_asc';
+
+export interface Review {
+  id: Id;
+  productId: Id;
+  productVariantId: Id;
+  /** 1..5 */
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  status: ReviewStatus;
+  verifiedPurchase: boolean;
+  /** Respuesta pública del local. */
+  reply: string | null;
+  repliedAt: ISODate | null;
+  moderatedAt: ISODate | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+  /** Nombre público, p. ej. "María G.". */
+  authorName: string;
+  productVariant?: { id: Id; name: string; images?: Image[]; product?: { id: Id; name: string } };
+  rejectionReason?: string | null;
+}
+
+export interface ReviewSummary {
+  productId: Id;
+  average: number;
+  count: number;
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  byVariant: { productVariantId: Id; average: number; count: number }[];
+}
+
+export interface ReviewEligibility {
+  productVariantId: Id;
+  variantName: string;
+  review: Review | null;
+}
+
+export interface ReviewInput {
+  productVariantId: Id;
+  rating: number;
+  /** Al editar, `null` borra el campo. */
+  title?: string | null;
+  comment?: string | null;
+}
+
+export interface ReviewQuery {
+  productId: Id;
+  productVariantId?: Id;
+  rating?: number;
+  page: number;
+  perPage?: number;
+  orderBy?: ReviewOrder;
+}
+
+// ---------------------------------------------------------------- Reseñas de Google
+
+export interface GoogleReview {
+  id: Id;
+  googleId: string;
+  authorName: string;
+  authorPhotoUrl: string | null;
+  authorUrl: string | null;
+  rating: number;
+  text: string | null;
+  language: string | null;
+  /** "hace 2 semanas" */
+  relativeTime: string | null;
+  publishedAt: ISODate | null;
+  featured: boolean;
+  active: boolean;
+  fetchedAt: ISODate;
+}
+
+export interface GooglePlaceInfo {
+  placeId: string | null;
+  name: string | null;
+  rating: number | null;
+  userRatingCount: number | null;
+  googleMapsUri: string | null;
+  lastSyncAt: ISODate | null;
+  configured: boolean;
+  lastError: string | null;
+}
+
+export interface GoogleReviews {
+  place: GooglePlaceInfo;
+  reviews: GoogleReview[];
+}
+
+// ---------------------------------------------------------------- Banners
+
+export type BannerPlacement = 'HOME_HERO' | 'HOME_RECOMMENDATION' | 'CATALOG_STRIP' | 'ANNOUNCEMENT_BAR';
+export type BannerSize = 'SQUARE' | 'WIDE';
+
+export interface Banner {
+  id: Id;
+  placement: BannerPlacement;
+  /** Nombre interno; también se usa como `alt` de la imagen. */
+  name: string;
+  eyebrow: string | null;
+  headline: string | null;
+  text: string | null;
+  ctaLabel: string | null;
+  /** Ruta interna ("/productos?categoria=x") o URL absoluta. */
+  linkUrl: string | null;
+  size: BannerSize | null;
+  desktopImageUrl: string | null;
+  /** Si es null se usa la de escritorio. */
+  mobileImageUrl: string | null;
+  backgroundColor: string | null;
+  textColor: string | null;
+  position: number;
+  startsAt: ISODate | null;
+  endsAt: ISODate | null;
+  active: boolean;
+  createdAt: ISODate;
+  updatedAt: ISODate;
 }

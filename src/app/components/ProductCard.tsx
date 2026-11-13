@@ -7,7 +7,7 @@ import { useAddToCartMutation } from '../api/shopApi';
 import { getErrorMessage } from '../api/client';
 import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
-import { cardPrice, productImages, quickAddLine } from '../lib/shop';
+import { cardPrice, hasOffer, productImages, quickAddLine } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 import { FavoriteButton } from './FavoriteButton';
 import { Spinner } from './States';
@@ -17,6 +17,8 @@ export function ProductCard({ product, className }: { product: Product; classNam
   const image = productImages(product, info?.variant)[0];
   const to = `/producto/${product.id}`;
   const discounted = info && info.list - info.price > 0.009;
+  // La oferta puede estar en otra variedad que no es la que muestra la tarjeta
+  const badge = info?.badge ?? (hasOffer(product) ? 'Oferta' : null);
 
   return (
     <article
@@ -38,8 +40,8 @@ export function ProductCard({ product, className }: { product: Product; classNam
             <ImageOff className="size-10" strokeWidth={1.25} />
           </div>
         )}
-        {info?.badge && (
-          <span className="absolute top-2 left-2 rounded-full bg-leaf-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm">{info.badge}</span>
+        {badge && (
+          <span className="absolute top-2 left-2 rounded-full bg-leaf-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm">{badge}</span>
         )}
         {info && !info.hasStock && (
           <span className="absolute inset-x-0 bottom-0 bg-ink-800/75 py-1 text-center text-xs font-medium tracking-wide text-white uppercase">

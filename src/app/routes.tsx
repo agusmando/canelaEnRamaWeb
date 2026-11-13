@@ -49,6 +49,8 @@ export const router = createBrowserRouter([
       },
       { path: 'contacto', lazy: page(() => import('./pages/Contact')) },
       { path: 'envios', lazy: page(() => import('./pages/Shipping')) },
+      { path: 'seguimiento', lazy: page(() => import('./pages/Tracking')) },
+      { path: 'seguimiento/:code', lazy: page(() => import('./pages/Tracking')) },
       { path: '*', lazy: page(() => import('./pages/NotFound')) },
     ],
   },

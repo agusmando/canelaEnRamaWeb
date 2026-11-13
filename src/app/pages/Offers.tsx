@@ -4,6 +4,7 @@ import { BadgePercent, Gift, Layers, Percent, ShoppingBag, Tag } from 'lucide-re
 import { useCatalogQuery } from '../api/shopApi';
 import type { DiscountType, Product } from '../api/types';
 import { getErrorMessage } from '../api/client';
+import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
@@ -96,6 +97,7 @@ export default function Offers() {
       </section>
 
       <div className="container-page space-y-14 py-10 sm:py-12">
+        <BannerStrip className="-mb-4" />
         {error ? (
           <ErrorState message={getErrorMessage(error)} onRetry={refetch} />
         ) : isLoading ? (

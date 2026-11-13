@@ -242,4 +242,17 @@ export function quickAddLine(p: Product) {
   return { productVariantId: v.id, quantity: 1, label: '1 u' };
 }
 
+/**
+ * Oferta vigente de una variante para mostrar al elegirla: precio por kg/u con
+ * la oferta aplicada a 1 unidad (si la oferta depende de la cantidad, como un
+ * 3x2, el precio no cambia y solo se muestra la etiqueta).
+ */
+export function variantDeal(v: ProductVariant, p?: Product) {
+  const offer = selectOffer(v, p);
+  const list = Number(v.finalPrice ?? 0);
+  if (!offer) return { offer: undefined, badge: null, list, price: list, discounted: false };
+  const price = applyOffer(list, 1, offer);
+  return { offer, badge: offerBadge(offer), list, price, discounted: list - price > 0.009 };
+}
+
 export const hasOffer = (p: Product) => webVariants(p).some((v) => selectOffer(v, p));

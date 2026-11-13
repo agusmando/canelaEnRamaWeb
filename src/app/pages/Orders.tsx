@@ -5,6 +5,7 @@ import { useMyOrdersQuery } from '../api/shopApi';
 import type { Order } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { EmptyState, ErrorState } from '../components/States';
+import { ShipmentChip } from '../components/ShipmentTracking';
 import { ORDER_STATUS, orderNumber, paymentLabel } from '../lib/orders';
 import { cn, formatCurrency, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -17,6 +18,10 @@ export function StatusBadge({ status }: { status: Order['status'] }) {
 export function OrderRow({ order }: { order: Order }) {
   const thumbs = (order.orderItems ?? []).map((i) => i.productVariant?.images?.[0]?.secure_url).filter(Boolean).slice(0, 3) as string[];
   const count = order.orderItems?.length ?? order.totalItems;
+  const saved = (order.orderItems ?? []).reduce(
+    (n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' ? 0 : i.discountAppliedSnapshot || 0),
+    0,
+  );
   return (
     <li>
       <Link to={`/mi-cuenta/pedidos/${order.id}`} className="group flex items-center gap-4 rounded-xl border border-ink-200 p-4 transition-colors hover:border-ink-300 hover:bg-ink-50/50">
@@ -33,12 +38,16 @@ export function OrderRow({ order }: { order: Order }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink-800">Pedido {orderNumber(order.id)}</span>
             <StatusBadge status={order.status} />
+            {order.shipment && <ShipmentChip status={order.shipment.status} />}
           </div>
           <p className="mt-1 text-sm text-ink-500">
             {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
           </p>
         </div>
-        <span className="text-lg font-semibold text-ink-800 tabular-nums">{formatCurrency(order.totalPrice)}</span>
+        <span className="flex flex-col items-end">
+          <span className="text-lg font-semibold text-ink-800 tabular-nums">{formatCurrency(order.totalPrice)}</span>
+          {saved > 0 && <span className="text-xs font-medium text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
+        </span>
         <Chevron className="size-5 text-ink-400 group-hover:text-brand-500" />
       </Link>
     </li>

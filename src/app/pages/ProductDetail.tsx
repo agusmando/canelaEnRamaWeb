@@ -7,6 +7,7 @@ import { useAddToCartMutation, useCatalogQuery, useProductQuery } from '../api/s
 import type { Product, ProductVariant } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ProductReviews, RatingSummaryLink } from '../components/ProductReviews';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { ProductGrid } from '../components/ProductCard';
 import { OfferProgress, PackPicker, VariantPicker, WeightPicker } from '../components/PurchaseOptions';
@@ -162,6 +163,7 @@ function ProductView({ product }: { product: Product }) {
                   </Link>
                 )}
                 <h1 className="mt-1 text-3xl font-medium tracking-tight text-ink-800 sm:text-[40px] sm:leading-tight">{product.name}</h1>
+                <RatingSummaryLink productId={product.id} className="mt-2" />
               </div>
               <div className="flex shrink-0 items-center gap-1 pt-1">
                 <ShareButton name={product.name} />
@@ -202,7 +204,7 @@ function ProductView({ product }: { product: Product }) {
               <div className="mt-8 rounded-xl bg-ink-50 p-5 text-ink-600">Este producto no está disponible para la venta online por el momento.</div>
             ) : (
               <div className="mt-7 space-y-6 rounded-2xl border border-ink-200 bg-white p-4 shadow-card sm:p-6">
-                {variants.length > 1 && <VariantPicker variants={variants} value={variant} onChange={chooseVariant} />}
+                {variants.length > 1 && <VariantPicker product={product} variants={variants} value={variant} onChange={chooseVariant} />}
 
                 {!loose ? (
                   <PackPicker product={product} variant={variant} packs={packs} value={pack} onChange={choosePack} />
@@ -287,6 +289,7 @@ function ProductView({ product }: { product: Product }) {
         </div>
       </div>
 
+      <ProductReviews product={product} variant={variant} multiVariant={variants.length > 1} />
       <Related product={product} />
       <RecentlyViewed exclude={product.id} />
     </>
