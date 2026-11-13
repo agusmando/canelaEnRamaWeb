@@ -1,0 +1,155 @@
+@import 'tailwindcss';
+
+/*
+ * Paleta tomada del diseño de Figma:
+ *   brand   #cc3b1d  (botones, acentos, logo)
+ *   blush   #faebe8  (tarjetas de categorías)
+ *   leaf    #95cc31  (etiqueta de descuento)
+ *   ink     #282828  (footer, textos)
+ */
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #fdf3f0;
+  --color-brand-100: #faebe8;
+  --color-brand-200: #f4cfc5;
+  --color-brand-300: #e9a08c;
+  --color-brand-400: #d6624a;
+  --color-brand-500: #cc3b1d;
+  --color-brand-600: #b23217;
+  --color-brand-700: #8f2812;
+  --color-brand-800: #6b1e0e;
+
+  --color-leaf-500: #95cc31;
+  --color-leaf-600: #7fb126;
+
+  --color-ink-50: #f6f6f6;
+  --color-ink-100: #eeeeee;
+  --color-ink-200: #dddddd;
+  --color-ink-300: #c4c4c4;
+  --color-ink-400: #9a9a9a;
+  --color-ink-500: #6f6f6f;
+  --color-ink-600: #545454;
+  --color-ink-700: #3d3d3d;
+  --color-ink-800: #282828;
+  --color-ink-900: #1c1c1c;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px rgb(0 0 0 / 0.04);
+  --shadow-lift: 0 10px 30px -10px rgb(0 0 0 / 0.18);
+
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-slide-in: slide-in 0.3s ease-out both;
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-ink-800 font-sans;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility container-page {
+    @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6;
+}
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-all duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0;
+}
+
+/* Acción principal: rojo de marca con sombra suave. */
+@utility btn-primary {
+    @apply btn bg-brand-500 text-white shadow-[0_1px_2px_rgb(204_59_29/0.25),inset_0_1px_0_rgb(255_255_255/0.12)] hover:bg-brand-600 hover:shadow-[0_6px_16px_-6px_rgb(204_59_29/0.55)] active:bg-brand-700;
+}
+
+/* Acción secundaria: borde de marca. */
+@utility btn-outline {
+    @apply btn border border-brand-500 text-brand-500 hover:bg-brand-500 hover:text-white;
+}
+
+/* Neutro: fondo blanco con borde gris (filtros, WhatsApp, paginación). */
+@utility btn-secondary {
+    @apply btn border border-ink-200 bg-white text-ink-800 shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:border-ink-300 hover:bg-ink-50;
+}
+
+@utility btn-ghost {
+    @apply btn text-ink-700 hover:bg-ink-100/70 hover:text-ink-900;
+}
+
+/* Botón de ícono redondo (header, cerrar, carruseles). */
+@utility btn-icon {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink-700 transition-all duration-150 hover:bg-ink-100 hover:text-ink-900 active:scale-95 disabled:pointer-events-none disabled:opacity-40;
+}
+
+@utility field {
+    @apply w-full rounded-md border border-ink-300 bg-white px-3 py-2.5 text-ink-800 placeholder:text-ink-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/15;
+}
+
+@utility chip {
+    @apply inline-flex items-center rounded-full border border-current px-2.5 py-0.5 text-sm leading-6;
+}
+
+@utility skeleton {
+    @apply animate-pulse rounded-md bg-ink-100;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Slider de rango de precios (dos inputs superpuestos). */
+.range-thumb {
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.range-thumb::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 9999px;
+  background: var(--color-brand-500);
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px var(--color-brand-500);
+  cursor: grab;
+}
+.range-thumb::-moz-range-thumb {
+  pointer-events: auto;
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
+  background: var(--color-brand-500);
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px var(--color-brand-500);
+  cursor: grab;
+}

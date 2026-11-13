@@ -1,0 +1,263 @@
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { axiosBaseQuery, request, toApiError, type QueryError } from './client';
+import type {
+  Cart,
+  CartLineInput,
+  Brand,
+  Category,
+  Id,
+  Order,
+  Paginated,
+  PaymentType,
+  Product,
+  Tag,
+} from './types';
+
+/**
+ * API de la tienda (RTK Query). Endpoints usados (ver colección de Postman):
+ *
+ *   GET  /product?active&detalle          catálogo completo (se filtra/ordena en el front)
+ *   GET  /product/:id                     detalle
+ *   GET  /category, /tag, /brand          menús, filtros y footer
+ *   POST /cart · GET /cart/me · GET|PUT /cart/:token   carrito de invitado o usuario
+ *   POST /order {fromCart}                checkout
+ *   GET  /order/mine · GET|PUT /order/:id mis pedidos / cancelar
+ */
+
+// ---------------------------------------------------------------- Carrito: a quién pertenece
+
+/** Estado mínimo que necesita la API (evita dependencia circular con el store). */
+interface CartOwnerState {
+  auth: { user: { supertokensId: string } | null };
+  cart: { guestToken: string | null };
+}
+
+export interface CartKey {
+  userId: string | null;
+  guest: string | null;
+}
+
+export const cartKeyOf = (s: CartOwnerState): CartKey => ({
+  userId: s.auth.user?.supertokensId ?? null,
+  guest: s.auth.user ? null : s.cart.guestToken,
+});
+
+/** Token para `PUT /cart/:token`: supertokensId del usuario o sessionId del invitado. */
+const cartToken = (k: CartKey) => k.userId ?? k.guest;
+
+/** Callback que el store registra para guardar el sessionId de un carrito de invitado nuevo. */
+let saveGuestToken: (token: string | null) => void = () => {};
+export function setGuestTokenHandler(fn: (token: string | null) => void) {
+  saveGuestToken = fn;
+}
+
+const asError = (e: unknown): QueryError => {
+  const err = toApiError(e);
+  return { status: err.status, message: err.message, payload: err.payload };
+};
+
+async function fetchCart(k: CartKey): Promise<Cart | null> {
+  try {
+    if (k.userId) return await request<Cart>({ url: '/cart/me' });
+    if (k.guest) return await request<Cart>({ url: `/cart/${k.guest}` });
+    return null;
+  } catch (e) {
+    const err = toApiError(e);
+    if (err.status === 404) {
+      if (!k.userId && k.guest) saveGuestToken(null); // carrito de invitado vencido
+      return null;
+    }
+    throw err;
+  }
+}
+
+export interface CartUpdate {
+  editItem?: CartLineInput[];
+  removeItem?: { productVariantId: Id; selectedBulkOption?: number }[];
+  clear?: boolean;
+}
+
+// ---------------------------------------------------------------- API
+
+export const shopApi = createApi({
+  reducerPath: 'shopApi',
+  baseQuery: axiosBaseQuery,
+  tagTypes: ['Catalog', 'Product', 'Category', 'Tag', 'Brand', 'Cart', 'Order'],
+  keepUnusedDataFor: 300,
+  refetchOnReconnect: true,
+  endpoints: (build) => ({
+    /** Todo el catálogo activo, con variantes, imágenes, ofertas, tags y categoría. */
+    catalog: build.query<Product[], void>({
+      query: () => ({ url: '/product', params: { active: true, detalle: true, paginate: false } }),
+      transformResponse: (raw: Product[] | Paginated<Product>) => (Array.isArray(raw) ? raw : raw.content ?? []),
+      providesTags: ['Catalog'],
+      keepUnusedDataFor: 900,
+    }),
+
+    product: build.query<Product, Id>({
+      query: (id) => ({ url: `/product/${id}` }),
+      providesTags: (_r, _e, id) => [{ type: 'Product', id }],
+    }),
+
+    categories: build.query<Category[], void>({
+      query: () => ({ url: '/category', params: { active: true, detalle: true, paginate: false } }),
+      transformResponse: (raw: Category[]) => (Array.isArray(raw) ? raw : []).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      providesTags: ['Category'],
+      keepUnusedDataFor: 900,
+    }),
+
+    tags: build.query<Tag[], void>({
+      query: () => ({ url: '/tag', params: { active: true, paginate: false } }),
+      transformResponse: (raw: Tag[]) => (Array.isArray(raw) ? raw : []).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      providesTags: ['Tag'],
+      keepUnusedDataFor: 900,
+    }),
+
+    brands: build.query<Brand[], void>({
+      query: () => ({ url: '/brand', params: { active: true, paginate: false } }),
+      transformResponse: (raw: Brand[] | Paginated<Brand>) =>
+        (Array.isArray(raw) ? raw : raw.content ?? []).filter((b) => b.active !== false).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      providesTags: ['Brand'],
+      keepUnusedDataFor: 900,
+    }),
+
+    // ------------------------------------------------------------ Carrito
+
+    cart: build.query<Cart | null, CartKey>({
+      queryFn: async (key) => {
+        try {
+          return { data: await fetchCart(key) };
+        } catch (e) {
+          return { error: asError(e) };
+        }
+      },
+      providesTags: ['Cart'],
+    }),
+
+    /**
+     * Agrega líneas. Usuario logueado: `POST /cart` crea o reutiliza su carrito y suma.
+     * Invitado: `PUT /cart/:sessionId {addItem}`; si no tiene carrito (o venció) `POST /cart`
+     * y se guarda el `sessionId` devuelto.
+     */
+    addToCart: build.mutation<Cart, CartLineInput[]>({
+      queryFn: async (items, { getState }) => {
+        const key = cartKeyOf(getState() as unknown as CartOwnerState);
+        try {
+          if (!key.userId && key.guest) {
+            try {
+              const cart = await request<Cart>({ url: `/cart/${key.guest}`, method: 'PUT', data: { addItem: items } });
+              return { data: cart };
+            } catch (e) {
+              if (toApiError(e).status !== 404) throw e;
+            }
+          }
+          const cart = await request<Cart>({ url: '/cart', method: 'POST', data: { items } });
+          if (!key.userId && cart.sessionId) saveGuestToken(cart.sessionId);
+          return { data: cart };
+        } catch (e) {
+          return { error: asError(e) };
+        }
+      },
+      async onQueryStarted(_arg, { dispatch, getState, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(shopApi.util.upsertQueryData('cart', cartKeyOf(getState() as unknown as CartOwnerState), data));
+        } catch {
+          /* el componente muestra el error */
+        }
+      },
+    }),
+
+    /** Editar cantidades (0 = quitar), quitar líneas o vaciar. */
+    updateCart: build.mutation<Cart, CartUpdate>({
+      queryFn: async (body, { getState }) => {
+        const token = cartToken(cartKeyOf(getState() as unknown as CartOwnerState));
+        if (!token) return { error: { status: 404, message: 'Tu carrito está vacío.' } };
+        try {
+          return { data: await request<Cart>({ url: `/cart/${token}`, method: 'PUT', data: body }) };
+        } catch (e) {
+          return { error: asError(e) };
+        }
+      },
+      async onQueryStarted(body, { dispatch, getState, queryFulfilled }) {
+        const key = cartKeyOf(getState() as unknown as CartOwnerState);
+        // Optimista: la línea editada cambia al instante; si falla se revierte.
+        const patch = dispatch(
+          shopApi.util.updateQueryData('cart', key, (draft) => {
+            if (!draft) return;
+            for (const e of body.editItem ?? []) {
+              const line = draft.items.find(
+                (i) => i.productVariantId === e.productVariantId && i.selectedBulkOption === (e.selectedBulkOption ?? 0),
+              );
+              if (line) line.quantity = e.quantity;
+            }
+            for (const r of body.removeItem ?? []) {
+              draft.items = draft.items.filter(
+                (i) =>
+                  !(
+                    i.productVariantId === r.productVariantId &&
+                    (r.selectedBulkOption === undefined || i.selectedBulkOption === r.selectedBulkOption)
+                  ),
+              );
+            }
+          }),
+        );
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(shopApi.util.upsertQueryData('cart', key, data));
+        } catch {
+          patch.undo();
+        }
+      },
+    }),
+
+    // ------------------------------------------------------------ Órdenes
+
+    checkout: build.mutation<Order, { paymentType: PaymentType }>({
+      query: ({ paymentType }) => ({ url: '/order', method: 'POST', data: { fromCart: true, paymentType } }),
+      // El checkout descuenta stock: refrescamos catálogo, carrito y pedidos.
+      invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
+    }),
+
+    myOrders: build.query<Paginated<Order>, { page: number; perPage?: number }>({
+      query: ({ page, perPage = 10 }) => ({
+        url: '/order/mine',
+        params: { currentPage: page, amountPerPage: perPage },
+      }),
+      transformResponse: (raw: Paginated<Order>) => {
+        const { page = 1, amountPerPage = 10, totalAmount = raw.content?.length ?? 0 } = raw.pagination ?? {};
+        return {
+          content: raw.content ?? [],
+          pagination: { page, amountPerPage, totalAmount, totalPages: Math.max(1, Math.ceil(totalAmount / amountPerPage)) },
+        };
+      },
+      providesTags: ['Order'],
+    }),
+
+    order: build.query<Order, Id>({
+      query: (id) => ({ url: `/order/${id}` }),
+      providesTags: (_r, _e, id) => [{ type: 'Order', id }],
+    }),
+
+    /** El cliente solo puede cancelar mientras la orden está PENDING. */
+    cancelOrder: build.mutation<Order, Id>({
+      query: (id) => ({ url: `/order/${id}`, method: 'PUT', data: { status: 'CANCELLED' } }),
+      invalidatesTags: (_r, error, id) => (error ? [] : ['Order', { type: 'Order', id }, 'Catalog', 'Product']),
+    }),
+  }),
+});
+
+export const {
+  useCatalogQuery,
+  useProductQuery,
+  useCategoriesQuery,
+  useTagsQuery,
+  useBrandsQuery,
+  useCartQuery,
+  useAddToCartMutation,
+  useUpdateCartMutation,
+  useCheckoutMutation,
+  useMyOrdersQuery,
+  useOrderQuery,
+  useCancelOrderMutation,
+} = shopApi;
