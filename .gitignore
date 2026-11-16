@@ -4,3 +4,6 @@ dist
 .env.local
 .env.*.local
 *.log
+
+# Estado local de wrangler (pages dev)
+.wrangler

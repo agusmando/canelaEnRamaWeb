@@ -9,7 +9,7 @@ import { getErrorMessage } from '../api/client';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function ForgotPassword() {
-  useDocumentTitle('Recuperar contraseña');
+  useDocumentTitle('Recuperar contraseña', { noindex: true });
   const initial = (useLocation().state as { email?: string } | null)?.email ?? '';
   const [email, setEmail] = useState(initial);
   const [error, setError] = useState<string | null>(null);

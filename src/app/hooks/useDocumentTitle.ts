@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { useSeo, type SeoOptions } from './useSeo';
 
-export function useDocumentTitle(title?: string) {
-  useEffect(() => {
-    document.title = title ? `${title} · Canela en Rama` : 'Canela en Rama · Almacén natural';
-  }, [title]);
+/** Atajo de `useSeo` para las páginas que solo definen el título. */
+export function useDocumentTitle(title?: string, options: Omit<SeoOptions, 'title'> = {}) {
+  useSeo({ ...options, title });
 }

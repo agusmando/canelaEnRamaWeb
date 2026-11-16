@@ -2,6 +2,8 @@
 # Sin 404.html en la raíz, Pages sirve index.html en cualquier ruta (fallback de SPA).
 
 # CSP: si cambia el dominio de la API, actualizar connect-src.
+# Las respuestas de las Pages Functions (functions/) no reciben estos headers: functions/_lib/api.ts
+# los copia (SECURITY_HEADERS). Mantener ambos sincronizados.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

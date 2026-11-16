@@ -32,6 +32,46 @@ Requisitos de configuración:
 - En el backend, `WEBSITE_DOMAIN` debe ser el dominio de esta tienda (los emails de recuperación de contraseña apuntan a `<WEBSITE_DOMAIN>/auth/reset-password`).
 - En producción, `CORS_ORIGINS` del backend debe incluir el dominio de la tienda.
 
+## SEO y Cloudflare Pages Functions
+
+La tienda es una SPA: los títulos/descripciones/Open Graph/JSON-LD se actualizan en el navegador
+(`src/app/hooks/useSeo.ts`, datos en `src/app/lib/seo.ts`), pero WhatsApp, Facebook o Instagram no ejecutan JS.
+Por eso hay **Pages Functions** en `functions/` (Cloudflare las despliega solas junto con `dist/`):
+
+| Ruta | Qué hace |
+| --- | --- |
+| `/sitemap.xml` (`functions/sitemap.xml.ts`) | Home, `/productos`, `/ofertas`, `/contacto`, `/envios` + `/producto/:id` de cada producto activo (`GET /api/product?active=true&detalle=true&paginate=false`). Cache 1 h (5 min si la API falló). |
+| `/producto/:id` (`functions/producto/[id].ts`) | Sirve el `index.html` de la SPA con `<title>`, description, canonical, `og:*`, `twitter:*` y JSON-LD `Product` del producto (`GET /api/product/:id`, timeout 2 s). Si la API falla devuelve la página sin cambios. |
+
+`public/robots.txt` apunta al sitemap; la imagen por defecto para compartir es `public/og-image.jpg` (1200×630).
+
+**Variable de entorno** (Cloudflare Pages → Settings → Variables and Secrets; es distinta de las `VITE_*`, que se usan solo en el build):
+
+| Entorno | `API_URL` | `SITE_URL` |
+| --- | --- | --- |
+| Production | `https://api.canelaenrama.com.ar` | `https://canelaenrama.com.ar` |
+| Preview | `https://api-dev.canelaenrama.com.ar` | `https://dev.canelaenrama.com.ar` |
+
+`SITE_URL` fija el dominio de los enlaces canónicos y del sitemap (sin ella se usa el del request, que en previews es `*.pages.dev`).
+
+Sin `API_URL` las Functions no fallan: el sitemap sale solo con las páginas fijas y el detalle sin metadatos del producto.
+
+Las respuestas de las Functions no reciben los headers de `public/_headers`: `functions/_lib/api.ts` agrega los de seguridad
+(incluida la CSP) si faltan — mantenerlos sincronizados.
+
+Probar en local:
+
+```bash
+npm run build
+npx wrangler pages dev dist --binding API_URL=https://api-dev.canelaenrama.com.ar
+curl -s http://localhost:8788/sitemap.xml
+curl -s http://localhost:8788/producto/1 | grep -E 'og:|<title>|ld\+json'
+npx tsc --noEmit -p functions   # chequeo de tipos de las Functions (Workers runtime)
+```
+
+Para revisar las previews reales: [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) y
+[Rich Results Test](https://search.google.com/test/rich-results) de Google.
+
 ## Pantallas y endpoints
 
 | Pantalla | Endpoints |

@@ -6,7 +6,7 @@ import { OrderRow } from './Orders';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Profile() {
-  useDocumentTitle('Mi cuenta');
+  useDocumentTitle('Mi cuenta', { noindex: true });
   const user = useAppSelector((s) => s.auth.user)!;
   const { data, isLoading } = useMyOrdersQuery({ page: 1, perPage: 3 });
 

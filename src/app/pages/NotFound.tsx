@@ -4,7 +4,7 @@ import { EmptyState } from '../components/States';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function NotFound() {
-  useDocumentTitle('Página no encontrada');
+  useDocumentTitle('Página no encontrada', { noindex: true });
   return (
     <div className="container-page py-10">
       <EmptyState

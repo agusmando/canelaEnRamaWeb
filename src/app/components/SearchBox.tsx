@@ -4,6 +4,7 @@ import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
 import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
 import { cardPrice, normalize, productImages, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
+import { cld } from '../lib/cloudinary';
 
 /** Resalta en `text` la parte que coincide con `term` (sin distinguir mayúsculas ni tildes). */
 function Highlight({ text, term }: { text: string; term: string }) {
@@ -238,7 +239,7 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
                         className={cn('mx-1.5 flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors', i === active && 'bg-brand-50')}
                       >
                         <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300">
-                          {img ? <img src={img} alt="" loading="lazy" className="size-full object-cover" /> : <ImageOff className="size-5" />}
+                          {img ? <img src={cld(img, { w: 96, h: 96 })} alt="" width={44} height={44} loading="lazy" decoding="async" className="size-full object-cover" /> : <ImageOff className="size-5" />}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm text-ink-800">

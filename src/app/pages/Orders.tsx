@@ -10,6 +10,7 @@ import { ORDER_STATUS, PAYMENT_STATUS, canPayOnline, orderNumber, orderTotal, pa
 import { SHIPMENT_METHOD } from '../lib/shipments';
 import { cn, formatCurrency, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { cld } from '../lib/cloudinary';
 
 export function StatusBadge({ status }: { status: Order['status'] }) {
   const s = ORDER_STATUS[status] ?? { label: status, className: 'bg-ink-50 text-ink-600 ring-ink-200' };
@@ -28,7 +29,7 @@ export function OrderRow({ order }: { order: Order }) {
       <Link to={`/mi-cuenta/pedidos/${order.id}`} className="group flex items-center gap-3 rounded-xl border border-ink-200 p-3.5 transition-colors sm:gap-4 sm:p-4 hover:border-ink-300 hover:bg-ink-50/50">
         <div className="hidden -space-x-3 sm:flex">
           {thumbs.length ? (
-            thumbs.map((t) => <img key={t} src={t} alt="" className="size-12 rounded-full border-2 border-white object-cover" />)
+            thumbs.map((t) => <img key={t} src={cld(t, { w: 96, h: 96 })} alt="" width={48} height={48} loading="lazy" decoding="async" className="size-12 rounded-full border-2 border-white object-cover" />)
           ) : (
             <span className="flex size-12 items-center justify-center rounded-full bg-brand-100 text-brand-500">
               <Package className="size-5" />
@@ -62,7 +63,7 @@ export function OrderRow({ order }: { order: Order }) {
 }
 
 export default function Orders() {
-  useDocumentTitle('Mis pedidos');
+  useDocumentTitle('Mis pedidos', { noindex: true });
   const [page, setPage] = useState(1);
   const { data, isLoading, isFetching, error, refetch } = useMyOrdersQuery({ page });
 

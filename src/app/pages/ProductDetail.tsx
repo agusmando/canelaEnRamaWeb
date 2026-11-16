@@ -33,7 +33,9 @@ import {
   webVariants,
 } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useSeo } from '../hooks/useSeo';
+import { productSeo } from '../lib/seo';
+import { cld, cldImg } from '../lib/cloudinary';
 
 /** Venta suelta por peso: mínimo y paso en gramos. */
 const LOOSE_MIN_G = 100;
@@ -42,7 +44,14 @@ const LOOSE_STEP_G = 50;
 export default function ProductDetail() {
   const id = Number(useParams().id);
   const { data: product, isLoading, error, refetch } = useProductQuery(id, { skip: !Number.isFinite(id) });
-  useDocumentTitle(product?.name);
+  const seo = useMemo(() => (product?.id ? productSeo(product, window.location.origin) : null), [product]);
+  useSeo(
+    seo
+      ? { title: product?.name, description: seo.description, image: seo.image, type: 'product', price: seo.price, jsonLd: seo.jsonLd }
+      : isLoading || (error && (error as { status?: number }).status !== 404)
+        ? {}
+        : { title: 'Producto no encontrado', noindex: true },
+  );
 
   if (isLoading) return <DetailSkeleton />;
   if (error || !product || !product.id) {
@@ -346,14 +355,24 @@ function Gallery({ images, name, badge }: { images: string[]; name: string; badg
               aria-current={idx === i}
               className={cn('size-[72px] shrink-0 overflow-hidden rounded-md ring-offset-2 transition sm:size-[90px]', idx === i ? 'ring-2 ring-brand-500' : 'opacity-70 hover:opacity-100')}
             >
-              <img src={src} alt="" className="size-full object-cover" />
+              <img src={cld(src, { w: 180, h: 180 })} alt="" width={90} height={90} loading="lazy" decoding="async" className="size-full object-cover" />
             </button>
           ))}
         </div>
       )}
       <div className="relative aspect-square w-full min-w-0 overflow-hidden rounded-lg bg-ink-100">
         {current ? (
-          <img src={current} alt={name} className="size-full object-cover animate-fade-in" key={current} />
+          <img
+            {...cldImg(current, { widths: [480, 720, 960, 1200], w: 1200, aspect: 1, sizes: '(min-width: 1024px) 600px, 100vw' })}
+            alt={name}
+            width={1200}
+            height={1200}
+            // Imagen principal del detalle: es el LCP de la página.
+            {...(i === 0 ? { fetchpriority: 'high' } : {})}
+            decoding="async"
+            className="size-full object-cover animate-fade-in"
+            key={current}
+          />
         ) : (
           <div className="flex size-full items-center justify-center text-ink-300">
             <ImageOff className="size-16" strokeWidth={1} />

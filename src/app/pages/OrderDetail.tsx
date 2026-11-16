@@ -23,6 +23,7 @@ import { SHIPMENT_METHOD } from '../lib/shipments';
 import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { cld } from '../lib/cloudinary';
 
 export default function OrderDetail() {
   const id = Number(useParams().id);
@@ -47,7 +48,7 @@ export default function OrderDetail() {
   const { data: fetchedShipment } = useOrderShipmentQuery(id, { skip: !order || order.shipment !== undefined });
   const shipment = order?.shipment !== undefined ? order.shipment : fetchedShipment;
   const { data: shippingConfig } = useShippingConfigQuery();
-  useDocumentTitle(`Pedido ${orderNumber(id)}`);
+  useDocumentTitle(`Pedido ${orderNumber(id)}`, { noindex: true });
 
   if (isLoading) return <PageLoader />;
   if (error || !order) return <ErrorState message={getErrorMessage(error) || 'No encontramos el pedido.'} onRetry={refetch} />;
@@ -240,7 +241,7 @@ export default function OrderDetail() {
             return (
               <li key={it.id} className={cn('flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4', closed && 'opacity-60')}>
                 <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300 sm:size-16">
-                  {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-6" />}
+                  {img ? <img src={cld(img, { w: 160, h: 160 })} alt="" loading="lazy" decoding="async" className="size-full object-cover" /> : <ImageOff className="size-6" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   {productId ? (

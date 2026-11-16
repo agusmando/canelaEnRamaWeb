@@ -11,7 +11,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 /** Destino del enlace que envía SuperTokens: `/auth/reset-password?token=…`. */
 export default function ResetPassword() {
-  useDocumentTitle('Nueva contraseña');
+  useDocumentTitle('Nueva contraseña', { noindex: true });
   const token = useSearchParams()[0].get('token') ?? '';
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');

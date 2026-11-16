@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector, useCartKey } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { describeQty } from '../lib/orders';
 import { cn, formatCurrency } from '../lib/utils';
+import { cld } from '../lib/cloudinary';
 
 /** Panel lateral que confirma lo agregado y muestra el resumen del carrito. */
 export function CartDrawer() {
@@ -50,7 +51,7 @@ export function CartDrawer() {
             return (
               <li key={`${it.productVariantId}-${it.selectedBulkOption}`} className="flex gap-3 py-4">
                 <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:size-16 bg-ink-50 text-ink-300">
-                  {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-6" />}
+                  {img ? <img src={cld(img, { w: 160, h: 160 })} alt="" width={80} height={80} loading="lazy" decoding="async" className="size-full object-cover" /> : <ImageOff className="size-6" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink-800">{v.product?.name ?? v.name}</p>

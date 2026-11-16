@@ -7,7 +7,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 /** "Mi domicilio": dirección de entrega para los envíos a domicilio. */
 export default function Address() {
-  useDocumentTitle('Mi domicilio');
+  useDocumentTitle('Mi domicilio', { noindex: true });
   const user = useAppSelector((s) => s.auth.user)!;
   const { data: config } = useShippingConfigQuery();
   const navigate = useNavigate();

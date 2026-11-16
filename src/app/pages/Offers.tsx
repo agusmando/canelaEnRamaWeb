@@ -52,7 +52,9 @@ const savingRatio = (p: Product) => {
 };
 
 export default function Offers() {
-  useDocumentTitle('Ofertas');
+  useDocumentTitle('Ofertas', {
+    description: 'Ofertas y promociones de Canela en Rama: descuentos y promos por cantidad en frutos secos, especias, harinas y más. Envíos en el Gran Mendoza.',
+  });
   const { data: catalog, isLoading, error, refetch } = useCatalogQuery();
 
   const groups = useMemo(() => {

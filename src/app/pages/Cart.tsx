@@ -24,6 +24,7 @@ import { SHIPMENT_METHOD, addressArea, addressLine, etaLabel } from '../lib/ship
 import { packLabel, stockUnit } from '../lib/shop';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { cld } from '../lib/cloudinary';
 
 const PAYMENT_ICONS: Record<PaymentType, LucideIcon> = {
   MERCADOPAGO: Wallet,
@@ -52,7 +53,7 @@ function storeMethod(m: ShipmentMethod) {
 }
 
 export default function Cart() {
-  useDocumentTitle('Carrito');
+  useDocumentTitle('Carrito', { noindex: true });
   const key = useCartKey();
   const authStatus = useAppSelector((s) => s.auth.status);
   const user = useAppSelector((s) => s.auth.user);
@@ -565,7 +566,7 @@ function CartLine({
         <X className="size-5" />
       </button>
       <Link to={`/producto/${productId}`} className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink-50 text-ink-300 sm:size-[100px]">
-        {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-7" />}
+        {img ? <img src={cld(img, { w: 200, h: 200 })} alt="" width={100} height={100} loading="lazy" decoding="async" className="size-full object-cover" /> : <ImageOff className="size-7" />}
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">

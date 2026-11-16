@@ -9,6 +9,7 @@ import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { cardPrice, hasOffer, productImages, quickAddLine } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
+import { cldImg } from '../lib/cloudinary';
 import { FavoriteButton } from './FavoriteButton';
 import { Spinner } from './States';
 
@@ -30,9 +31,18 @@ export function ProductCard({ product, className }: { product: Product; classNam
       <div className="relative aspect-square overflow-hidden rounded-xl bg-ink-50">
         {image ? (
           <img
-            src={image}
+            {...cldImg(image, {
+              widths: [240, 360, 480, 600],
+              w: 480,
+              aspect: 1,
+              // grilla: 2 columnas en mobile, 3 en md, 4 en lg (contenedor máx. ~1280px)
+              sizes: '(min-width: 1024px) 300px, (min-width: 768px) 33vw, 50vw',
+            })}
             alt=""
+            width={480}
+            height={480}
             loading="lazy"
+            decoding="async"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

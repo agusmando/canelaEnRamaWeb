@@ -4,7 +4,9 @@ import { CONTACT, whatsappLink } from '../lib/contact';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Contact() {
-  useDocumentTitle('Contacto');
+  useDocumentTitle('Contacto', {
+    description: 'Contactá a Canela en Rama: Colombia 1268, Godoy Cruz, Mendoza. WhatsApp, horarios, cómo llegar y redes sociales.',
+  });
   const items = [
     { icon: MapPin, title: 'Visitanos', text: CONTACT.address, href: CONTACT.mapsUrl, cta: 'Cómo llegar' },
     { icon: MessageCircle, title: 'WhatsApp', text: CONTACT.phone, href: whatsappLink('Hola Canela en Rama! Quería hacer una consulta.'), cta: 'Escribinos' },

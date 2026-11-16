@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /mi-cuenta
+Disallow: /carrito
+Disallow: /auth
+Disallow: /login
+Disallow: /registro
+Disallow: /recuperar
+
+Sitemap: https://canelaenrama.com.ar/sitemap.xml

@@ -12,7 +12,9 @@ const STEPS = [
 ];
 
 export default function Shipping() {
-  useDocumentTitle('Envíos');
+  useDocumentTitle('Envíos', {
+    description: 'Envíos a domicilio en el Gran Mendoza y retiro sin costo en nuestro local de Godoy Cruz. Zonas, costos y tiempos de entrega.',
+  });
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ label: 'Envíos' }]} />

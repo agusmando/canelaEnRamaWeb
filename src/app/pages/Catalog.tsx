@@ -136,7 +136,14 @@ export default function Catalog() {
         : onlyOffers
           ? 'Ofertas'
           : 'Todos los productos';
-  useDocumentTitle(title);
+  useDocumentTitle(title, {
+    description:
+      title === 'Todos los productos'
+        ? 'Catálogo de Canela en Rama: frutos secos, harinas, especias, cereales, productos sin TACC y más, por peso o en presentaciones. Envíos en el Gran Mendoza.'
+        : `${title} en Canela en Rama, almacén natural en Godoy Cruz, Mendoza. Comprá online con envío en el Gran Mendoza o retiro en el local.`,
+    // Las búsquedas no se indexan.
+    noindex: !!q,
+  });
 
   const chips: { label: string; remove: () => void }[] = [
     ...(q ? [{ label: `“${q}”`, remove: () => update({ q: null }) }] : []),

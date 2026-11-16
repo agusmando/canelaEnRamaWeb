@@ -13,7 +13,10 @@ import { RecentlyViewed } from '../components/RecentlyViewed';
 import { cardPrice, hasOffer, inStock, productImages, slugify, webVariants } from '../lib/shop';
 import { getErrorMessage } from '../api/client';
 import { cn } from '../lib/utils';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { cld, cldSrcSet } from '../lib/cloudinary';
+import { useSeo } from '../hooks/useSeo';
+import { storeJsonLd } from '../lib/seo';
+import { CONTACT } from '../lib/contact';
 import recFrutos from '@/assets/rec-frutos-secos.jpg';
 import recSinTacc from '@/assets/rec-sin-tacc.jpg';
 import recEspecias from '@/assets/rec-especias.jpg';
@@ -26,8 +29,10 @@ function rankForShowcase(products: Product[]) {
 }
 
 
+const STORE_JSON_LD = storeJsonLd(CONTACT);
+
 export default function Home() {
-  useDocumentTitle();
+  useSeo({ jsonLd: STORE_JSON_LD });
   const { data: catalog, isLoading, error, refetch } = useCatalogQuery();
 
   const { promo, promoTitle, featured } = useMemo(() => {
@@ -423,9 +428,14 @@ function Recommendations() {
                   className={cn('group relative block overflow-hidden rounded-xl bg-ink-100', tileClass(r, row))}
                 >
                   <picture>
-                    {r.mobileImg && r.mobileImg !== r.img && <source media="(max-width: 639px)" srcSet={r.mobileImg} />}
+                    {r.mobileImg && r.mobileImg !== r.img && (
+                      <source media="(max-width: 639px)" srcSet={cldSrcSet(r.mobileImg, [400, 640, 800, 1080]) ?? r.mobileImg} sizes="100vw" />
+                    )}
                     <img
-                      src={r.img}
+                      src={cld(r.img, { w: r.size === 'SQUARE' ? 600 : 1200 })}
+                      srcSet={cldSrcSet(r.img, r.size === 'SQUARE' ? [400, 600, 800, 1200] : [640, 960, 1200, 1600])}
+                      // ancho: 100% en mobile; en escritorio ~26% (cuadrado) o el resto de la fila del contenedor de 1200px
+                      sizes={r.size === 'SQUARE' ? '(min-width: 640px) 40vw, 100vw' : '(min-width: 1200px) 860px, (min-width: 640px) 75vw, 100vw'}
                       alt={r.alt}
                       width={r.size === 'SQUARE' ? 600 : 1200}
                       height={r.size === 'SQUARE' ? 600 : 420}

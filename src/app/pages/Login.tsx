@@ -11,7 +11,7 @@ import { useReturnTo } from '../hooks/useReturnTo';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Login() {
-  useDocumentTitle('Acceder');
+  useDocumentTitle('Acceder', { noindex: true });
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const returnTo = useReturnTo();

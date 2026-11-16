@@ -31,7 +31,7 @@ export function PasswordChecklist({ password }: { password: string }) {
 }
 
 export default function Register() {
-  useDocumentTitle('Crear cuenta');
+  useDocumentTitle('Crear cuenta', { noindex: true });
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const returnTo = useReturnTo();

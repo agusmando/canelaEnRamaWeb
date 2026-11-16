@@ -47,7 +47,7 @@ export function BannerStrip({ className }: { className?: string }) {
             className="aspect-[8/3] w-full shrink-0 sm:aspect-[16/3]"
           >
             <BannerLink href={b.linkUrl} label={b.headline || b.name} tabIndex={idx === i ? 0 : -1} className="block size-full">
-              <BannerPicture banner={b} width={1600} height={300} mobileWidth={800} mobileHeight={300} />
+              <BannerPicture banner={b} width={1600} height={300} mobileWidth={800} mobileHeight={300} sizes="(min-width: 1200px) 1152px, 100vw" />
             </BannerLink>
           </div>
         ))}
