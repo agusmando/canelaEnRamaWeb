@@ -37,6 +37,7 @@ export const router = createBrowserRouter([
       { path: 'recuperar', lazy: page(() => import('./pages/ForgotPassword')) },
       // Rutas que usa SuperTokens (websiteBasePath = /auth).
       { path: 'auth/reset-password', lazy: page(() => import('./pages/ResetPassword')) },
+      { path: 'auth/verify-email', lazy: page(() => import('./pages/VerifyEmail')) },
       { path: 'auth/callback/google', lazy: page(() => import('./pages/GoogleCallback')) },
       {
         path: 'mi-cuenta',

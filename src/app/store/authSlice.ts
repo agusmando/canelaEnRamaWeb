@@ -213,6 +213,38 @@ export async function resetPassword(token: string, password: string) {
   if (res.status !== 'OK') throw new ApiError(stError(res, 'No se pudo cambiar la contraseña.'), 400);
 }
 
+// ---------------------------------------------------------------- Verificación de email
+// Confirmar el email permite entrar a la misma cuenta con contraseña y con Google.
+
+const EV_HEADERS = { rid: 'emailverification' };
+
+/** Destino del enlace del mail (`/auth/verify-email?token=…`). No requiere sesión. */
+export async function verifyEmailToken(token: string) {
+  const res = await request<StResponse>({
+    url: '/auth/user/email/verify',
+    method: 'POST',
+    headers: EV_HEADERS,
+    data: { method: 'token', token },
+  });
+  if (res.status === 'EMAIL_VERIFICATION_INVALID_TOKEN_ERROR') {
+    throw new ApiError('El enlace venció o ya fue usado. Pedí uno nuevo desde Mi cuenta.', 400);
+  }
+  if (res.status !== 'OK') throw new ApiError(stError(res, 'No pudimos confirmar tu email.'), 400);
+}
+
+/** ¿El email de la sesión está confirmado? */
+export async function isEmailVerified(): Promise<boolean> {
+  const res = await request<StResponse & { isVerified?: boolean }>({ url: '/auth/user/email/verify', headers: EV_HEADERS });
+  return !!res.isVerified;
+}
+
+/** Manda (o reenvía) el mail de confirmación al usuario logueado. */
+export async function sendVerificationEmail() {
+  const res = await request<StResponse>({ url: '/auth/user/email/verify/token', method: 'POST', headers: EV_HEADERS });
+  if (res.status === 'EMAIL_ALREADY_VERIFIED_ERROR') return;
+  if (res.status !== 'OK') throw new ApiError(stError(res, 'No pudimos enviar el email.'), 400);
+}
+
 // ---------------------------------------------------------------- Sesión
 
 export const restoreSession = createAsyncThunk<User, void, { rejectValue: string }>(

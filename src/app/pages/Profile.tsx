@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Mail, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowRight, BadgeCheck, Mail, MailWarning, ShieldCheck } from 'lucide-react';
 import { useMyOrdersQuery } from '../api/shopApi';
+import { getErrorMessage } from '../api/client';
 import { useAppSelector } from '../store';
+import { isEmailVerified, sendVerificationEmail } from '../store/authSlice';
+import { Spinner } from '../components/States';
 import { OrderRow } from './Orders';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -24,11 +29,12 @@ export default function Profile() {
             <dd className="mt-1 flex items-center gap-2 text-ink-800">
               <Mail className="size-4 shrink-0 text-ink-400" /> <span className="min-w-0 break-all">{user.email ?? '—'}</span>
             </dd>
+            <EmailVerification />
           </div>
         </dl>
         <p className="mt-5 flex items-start gap-2 rounded-lg bg-ink-50 p-3 text-sm text-ink-600">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-600" />
-          Para cambiar tu contraseña usá “¿Olvidaste tu contraseña?” en el ingreso. Si entrás con Google, tu cuenta se gestiona desde Google.
+          Para cambiar tu contraseña usá “¿Olvidaste tu contraseña?” en el ingreso. Con el email confirmado podés entrar con tu contraseña o con Google (mismo email): es la misma cuenta.
         </p>
       </section>
 
@@ -60,6 +66,51 @@ export default function Profile() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Estado de confirmación del email y botón para (re)enviar el mail. */
+function EmailVerification() {
+  const [verified, setVerified] = useState<boolean | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    isEmailVerified()
+      .then(setVerified)
+      .catch(() => setVerified(null));
+  }, []);
+
+  if (verified === null) return null;
+  if (verified) {
+    return (
+      <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-local-700">
+        <BadgeCheck className="size-4" aria-hidden /> Email confirmado
+      </p>
+    );
+  }
+  const send = async () => {
+    setSending(true);
+    try {
+      await sendVerificationEmail();
+      setSent(true);
+      toast.success('Te mandamos un mail para confirmar tu email');
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <div className="mt-2 text-sm">
+      <p className="inline-flex items-center gap-1.5 text-ink-600">
+        <MailWarning className="size-4 text-brand-500" aria-hidden /> Email sin confirmar
+      </p>
+      <button type="button" onClick={send} disabled={sending || sent} className="btn-ghost mt-1 -ml-2 h-9 px-2 text-sm font-medium text-brand-600">
+        {sending && <Spinner className="size-4" />}
+        {sent ? 'Revisá tu casilla (y la carpeta de spam)' : 'Enviar mail de confirmación'}
+      </button>
     </div>
   );
 }
