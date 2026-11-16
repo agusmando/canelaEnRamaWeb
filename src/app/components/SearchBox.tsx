@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
 import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
-import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, productImages, slugify } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, matchesWords, normalize, productImages, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 import { cld } from '../lib/cloudinary';
 
@@ -87,9 +87,12 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
     if (term.length < 2 || !catalog) return [];
     return catalog
       .filter((p) =>
-        normalize(
-          `${p.name} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
-        ).includes(term),
+        matchesWords(
+          normalize(
+            `${p.name} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
+          ),
+          term,
+        ),
       )
       .slice(0, 6);
   }, [q, catalog]);

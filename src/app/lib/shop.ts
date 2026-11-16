@@ -208,6 +208,21 @@ export const normalize = (s: string) =>
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '');
 
+/** Singular aproximado: "nueces" ~ "nuez", "almendras" ~ "almendra" (igual que el backend, utils/textSearch). */
+export const stem = (w: string) => {
+  if (w.length > 4 && w.endsWith('ces')) return w.slice(0, -3) + 'z';
+  if (w.length > 4 && w.endsWith('es')) return w.slice(0, -2);
+  if (w.length > 3 && w.endsWith('s')) return w.slice(0, -1);
+  return w;
+};
+
+/** Cada palabra de `term` aparece en `hay` tal cual (mientras se escribe) o en singular. Textos ya normalizados. */
+export function matchesWords(hay: string, term: string) {
+  const words = term.split(/\s+/).filter(Boolean);
+  const stemmed = hay.split(/\s+/).map(stem).join(' ');
+  return words.every((w) => hay.includes(w) || stemmed.includes(stem(w)));
+}
+
 export const slugify = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 // ---------------------------------------------------------------- Selector de compra

@@ -8,7 +8,7 @@ import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
-import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, selectOffer, slugify, webVariants } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, matchesWords, normalize, selectOffer, slugify, webVariants } from '../lib/shop';
 import { cn, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -88,7 +88,7 @@ export default function Catalog() {
         const hay = normalize(
           `${p.name} ${p.description ?? ''} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
         );
-        if (!term.split(/\s+/).every((w) => hay.includes(w))) return false;
+        if (!matchesWords(hay, term)) return false;
       }
       return true;
     });
