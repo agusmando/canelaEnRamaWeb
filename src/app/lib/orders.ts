@@ -57,3 +57,6 @@ export function itemTotal(it: OrderItem) {
 }
 
 export const orderNumber = (id: number) => `#${String(id).padStart(5, '0')}`;
+
+/** Lo que paga el cliente: `totalPrice` es solo productos, el envío va aparte. */
+export const orderTotal = (o: Pick<Order, 'totalPrice' | 'shippingCost'>) => (Number(o.totalPrice) || 0) + (Number(o.shippingCost) || 0);

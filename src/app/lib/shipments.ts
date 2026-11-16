@@ -21,3 +21,19 @@ export const shipmentStatusLabel = (s: string) => SHIPMENT_STATUS[s as ShipmentS
 
 /** Normaliza lo que escribe el usuario: sin espacios y en mayúsculas ("cer-7x4k" → "CER-7X4K"). */
 export const normalizeTrackingCode = (code: string) => code.replace(/\s+/g, '').toUpperCase();
+
+/** "Av. San Martín 1234, 2° B" */
+export const addressLine = (a: { street: string; number: string; apartment?: string | null }) =>
+  `${a.street} ${a.number}`.trim() + (a.apartment ? `, ${a.apartment}` : '');
+
+/** "Barrio Bombal, Godoy Cruz, Mendoza" */
+export const addressArea = (a: { city?: string | null; zone: string; province?: string | null }) =>
+  [a.city, a.zone, a.province].filter(Boolean).join(', ');
+
+/** "Llega en ~60 min" / "Llega en ~2 h" */
+export function etaLabel(minutes: number | null | undefined) {
+  if (!minutes || minutes <= 0) return null;
+  if (minutes < 90) return `Llega en ~${Math.round(minutes)} min`;
+  const h = Math.round((minutes / 60) * 2) / 2;
+  return `Llega en ~${String(h).replace('.', ',')} h`;
+}

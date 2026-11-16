@@ -21,6 +21,11 @@ import type {
   ReviewQuery,
   ReviewSummary,
   Shipment,
+  ShipmentMethod,
+  ShippingConfig,
+  ShippingQuote,
+  UserAddress,
+  UserAddressInput,
   GoogleReviews,
   Tag,
 } from './types';
@@ -42,6 +47,7 @@ import type {
  *   GET  /review · /review/summary        opiniones aprobadas de un producto
  *   GET  /review/eligible · /review/mine · POST|PUT|DELETE /review   opinar sobre lo comprado
  *   GET  /shipment/order/:orderId · /shipment/track/:code             seguimiento de envíos
+ *   GET  /shipping/config · GET|PUT /shipping/address · GET /shipping/quote   envío a domicilio
  */
 
 // ---------------------------------------------------------------- Carrito: a quién pertenece
@@ -97,12 +103,15 @@ export interface CartUpdate {
   clear?: boolean;
 }
 
+/** Número de la última edición del carrito (ver `updateCart`). */
+let cartUpdateSeq = 0;
+
 // ---------------------------------------------------------------- API
 
 export const shopApi = createApi({
   reducerPath: 'shopApi',
   baseQuery: axiosBaseQuery,
-  tagTypes: ['Catalog', 'Product', 'Category', 'Tag', 'Brand', 'Cart', 'Order', 'Banner', 'GoogleReview', 'Review', 'Shipment'],
+  tagTypes: ['Catalog', 'Product', 'Category', 'Tag', 'Brand', 'Cart', 'Order', 'Banner', 'GoogleReview', 'Review', 'Shipment', 'Address', 'ShippingQuote'],
   keepUnusedDataFor: 300,
   refetchOnReconnect: true,
   endpoints: (build) => ({
@@ -188,7 +197,11 @@ export const shopApi = createApi({
       },
     }),
 
-    /** Editar cantidades (0 = quitar), quitar líneas o vaciar. */
+    /**
+     * Editar cantidades (0 = quitar), quitar líneas o vaciar.
+     * Las respuestas pueden llegar desordenadas si hay varias en vuelo: solo la
+     * última escribe en la cache, para que el carrito no "salte" a un valor viejo.
+     */
     updateCart: build.mutation<Cart, CartUpdate>({
       queryFn: async (body, { getState }) => {
         const token = cartToken(cartKeyOf(getState() as unknown as CartOwnerState));
@@ -201,6 +214,7 @@ export const shopApi = createApi({
       },
       async onQueryStarted(body, { dispatch, getState, queryFulfilled }) {
         const key = cartKeyOf(getState() as unknown as CartOwnerState);
+        const seq = ++cartUpdateSeq;
         // Optimista: la línea editada cambia al instante; si falla se revierte.
         const patch = dispatch(
           shopApi.util.updateQueryData('cart', key, (draft) => {
@@ -224,17 +238,21 @@ export const shopApi = createApi({
         );
         try {
           const { data } = await queryFulfilled;
-          dispatch(shopApi.util.upsertQueryData('cart', key, data));
+          if (seq === cartUpdateSeq) dispatch(shopApi.util.upsertQueryData('cart', key, data));
         } catch {
+          // Con varios cambios encadenados deshacer solo este parche deja un estado
+          // mezclado: se descarta y se vuelve a pedir el carrito real.
           patch.undo();
+          dispatch(shopApi.util.invalidateTags(['Cart']));
         }
       },
     }),
 
     // ------------------------------------------------------------ Órdenes
 
-    checkout: build.mutation<Order, { paymentType: PaymentType }>({
-      query: ({ paymentType }) => ({ url: '/order', method: 'POST', data: { fromCart: true, paymentType } }),
+    /** Con DELIVERY el servidor vuelve a cotizar el envío (es quien define el precio). */
+    checkout: build.mutation<Order, { paymentType: PaymentType; shippingMethod: ShipmentMethod }>({
+      query: ({ paymentType, shippingMethod }) => ({ url: '/order', method: 'POST', data: { fromCart: true, paymentType, shippingMethod } }),
       // El checkout descuenta stock: refrescamos catálogo, carrito y pedidos.
       invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
     }),
@@ -299,6 +317,32 @@ export const shopApi = createApi({
     trackShipment: build.query<PublicTracking, string>({
       query: (code) => ({ url: `/shipment/track/${encodeURIComponent(code)}` }),
       providesTags: (_r, _e, code) => [{ type: 'Shipment', id: code }],
+      keepUnusedDataFor: 60,
+    }),
+
+    /** Zonas activas, departamentos válidos y datos del local para retirar. */
+    shippingConfig: build.query<ShippingConfig, void>({
+      query: () => ({ url: '/shipping/config' }),
+      keepUnusedDataFor: 900,
+    }),
+
+    /** Domicilio guardado del usuario (`null` si todavía no cargó uno). */
+    myAddress: build.query<UserAddress | null, void>({
+      query: () => ({ url: '/shipping/address' }),
+      // Sin domicilio guardado: null (nunca un objeto vacío o incompleto)
+      transformResponse: (raw: UserAddress | null | undefined) => (raw && raw.street && raw.number ? raw : null),
+      providesTags: ['Address'],
+    }),
+
+    saveAddress: build.mutation<UserAddress, UserAddressInput>({
+      query: (data) => ({ url: '/shipping/address', method: 'PUT', data }),
+      invalidatesTags: (_r, error) => (error ? [] : ['Address', 'ShippingQuote']),
+    }),
+
+    /** Cotización del envío a domicilio; `value` = total de productos del carrito. */
+    shippingQuote: build.query<ShippingQuote, number>({
+      query: (value) => ({ url: '/shipping/quote', params: { value } }),
+      providesTags: ['ShippingQuote'],
       keepUnusedDataFor: 60,
     }),
 
@@ -398,6 +442,10 @@ export const {
   useCancelOrderMutation,
   useOrderShipmentQuery,
   useTrackShipmentQuery,
+  useShippingConfigQuery,
+  useMyAddressQuery,
+  useSaveAddressMutation,
+  useShippingQuoteQuery,
   useBannersQuery,
   useGoogleReviewsQuery,
   useReviewsQuery,

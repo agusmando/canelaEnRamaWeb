@@ -21,7 +21,7 @@ setupListeners(store.dispatch);
 
 setSessionExpiredHandler(() => {
   store.dispatch(sessionExpired());
-  store.dispatch(shopApi.util.invalidateTags(['Cart', 'Order']));
+  store.dispatch(shopApi.util.invalidateTags(['Cart', 'Order', 'Address', 'ShippingQuote']));
 });
 
 setGuestTokenHandler((token) => store.dispatch(setGuestToken(token)));

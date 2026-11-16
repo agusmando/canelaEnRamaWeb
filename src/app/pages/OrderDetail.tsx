@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
-import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Clock, ImageOff, MessageCircle, RotateCcw, Wallet, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Clock, ExternalLink, ImageOff, MapPin, MessageCircle, RotateCcw, Store, Truck, Wallet, XCircle } from 'lucide-react';
 import {
   useAddToCartMutation,
   useCancelOrderMutation,
   useCreatePaymentPreferenceMutation,
   useOrderQuery,
   useOrderShipmentQuery,
+  useShippingConfigQuery,
   useSyncPaymentMutation,
 } from '../api/shopApi';
 import type { Order } from '../api/types';
@@ -17,7 +18,8 @@ import { getErrorMessage } from '../api/client';
 import { ErrorState, PageLoader, Spinner } from '../components/States';
 import { StatusBadge } from './Orders';
 import { ShipmentDetails } from '../components/ShipmentTracking';
-import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, PAYMENT_STATUS, canPayOnline, describeQty, itemTotal, orderNumber, paymentLabel } from '../lib/orders';
+import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, PAYMENT_STATUS, canPayOnline, describeQty, itemTotal, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
+import { SHIPMENT_METHOD } from '../lib/shipments';
 import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -44,6 +46,7 @@ export default function OrderDetail() {
   // El pedido trae `shipment` (o null si no tiene); si el backend no lo incluye, se pide aparte (404 → sin envío).
   const { data: fetchedShipment } = useOrderShipmentQuery(id, { skip: !order || order.shipment !== undefined });
   const shipment = order?.shipment !== undefined ? order.shipment : fetchedShipment;
+  const { data: shippingConfig } = useShippingConfigQuery();
   useDocumentTitle(`Pedido ${orderNumber(id)}`);
 
   if (isLoading) return <PageLoader />;
@@ -63,6 +66,11 @@ export default function OrderDetail() {
     }
   };
   const isMp = order.paymentType === 'MERCADOPAGO';
+  const method = order.shippingMethod ?? shipment?.method ?? 'PICKUP';
+  const isDelivery = method === 'DELIVERY';
+  const shippingCost = Number(order.shippingCost) || 0;
+  const deliveryAddress = shipment ? [shipment.address, shipment.city, shipment.province, shipment.postalCode].filter(Boolean).join(', ') : '';
+  const courierUrl = isDelivery && shipment?.carrierTrackingUrl && !['DELIVERED', 'RETURNED', 'CANCELLED'].includes(shipment.status) ? shipment.carrierTrackingUrl : null;
   const paymentLocked = order.paymentStatus === 'APPROVED' || order.paymentStatus === 'IN_PROCESS';
 
   const doCancel = async () => {
@@ -121,7 +129,7 @@ export default function OrderDetail() {
             Pedido {orderNumber(order.id)} <StatusBadge status={order.status} />
           </h1>
           <p className="mt-1 text-sm text-ink-500">
-            {formatDateTime(order.createdAt)} · {paymentLabel(order.paymentType)}
+            {formatDateTime(order.createdAt)} · {paymentLabel(order.paymentType)} · {SHIPMENT_METHOD[method] ?? method}
             {isMp && order.paymentStatus && (
               <span className={cn('ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1', PAYMENT_STATUS[order.paymentStatus].className)}>
                 {PAYMENT_STATUS[order.paymentStatus].label}
@@ -179,6 +187,48 @@ export default function OrderDetail() {
         </p>
       )}
 
+      <section aria-labelledby="entrega" className="flex flex-col gap-4 rounded-xl border border-ink-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+            {isDelivery ? <Truck className="size-5" /> : <Store className="size-5" />}
+          </span>
+          <div className="min-w-0 text-sm">
+            <h2 id="entrega" className="text-base font-semibold text-ink-800">
+              {SHIPMENT_METHOD[method] ?? method}
+              <span className="ml-2 font-normal text-ink-500">· {shippingCost > 0 ? formatCurrency(shippingCost) : isDelivery ? 'Envío gratis' : 'Sin cargo'}</span>
+            </h2>
+            {isDelivery ? (
+              deliveryAddress ? (
+                <p className="mt-1 flex items-start gap-1.5 break-words text-ink-600">
+                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-ink-400" />
+                  <span>
+                    {deliveryAddress}
+                    {(shipment?.recipientName || shipment?.phone) && (
+                      <span className="block text-ink-500">Recibe {[shipment?.recipientName, shipment?.phone].filter(Boolean).join(' · ')}</span>
+                    )}
+                    {shipment?.notes && <span className="block text-ink-500">{shipment.notes}</span>}
+                  </span>
+                </p>
+              ) : (
+                order.shippingZone && <p className="mt-1 text-ink-600">Envío a {order.shippingZone}</p>
+              )
+            ) : (
+              shippingConfig?.pickup && (
+                <p className="mt-1 text-ink-600">
+                  Retirás en {shippingConfig.pickup.name}, {shippingConfig.pickup.address}
+                </p>
+              )
+            )}
+          </div>
+        </div>
+        {courierUrl && (
+          <a href={courierUrl} target="_blank" rel="noreferrer" className="btn-primary h-11 shrink-0 px-5 text-sm">
+            <Truck className="size-4" /> Seguir al repartidor <ExternalLink className="size-3.5" />
+            <span className="sr-only">(se abre en otra pestaña)</span>
+          </a>
+        )}
+      </section>
+
       {shipment && <ShipmentDetails data={shipment} />}
 
       <section className="rounded-xl border border-ink-200">
@@ -230,9 +280,19 @@ export default function OrderDetail() {
               <dd>−{formatCurrency(discount)}</dd>
             </div>
           )}
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between text-ink-600">
+            <dt>Productos</dt>
+            <dd className="tabular-nums">{formatCurrency(order.totalPrice)}</dd>
+          </div>
+          <div className="flex justify-between text-ink-600">
+            <dt>{isDelivery ? 'Envío a domicilio' : 'Retiro en el local'}</dt>
+            <dd className={cn('tabular-nums', shippingCost === 0 && 'text-leaf-600')}>
+              {shippingCost > 0 ? formatCurrency(shippingCost) : isDelivery ? 'Gratis' : 'Sin cargo'}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between border-t border-ink-100 pt-2">
             <dt className="text-base font-semibold text-ink-800">Total</dt>
-            <dd className="text-xl font-bold text-ink-800">{formatCurrency(order.totalPrice)}</dd>
+            <dd className="text-xl font-bold text-ink-800 tabular-nums">{formatCurrency(orderTotal(order))}</dd>
           </div>
         </dl>
       </section>

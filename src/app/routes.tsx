@@ -43,6 +43,7 @@ export const router = createBrowserRouter([
         lazy: lazyAccount,
         children: [
           { index: true, lazy: page(() => import('./pages/Profile')) },
+          { path: 'domicilio', lazy: page(() => import('./pages/Address')) },
           { path: 'pedidos', lazy: page(() => import('./pages/Orders')) },
           { path: 'pedidos/:id', lazy: page(() => import('./pages/OrderDetail')) },
         ],

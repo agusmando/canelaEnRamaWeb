@@ -6,7 +6,8 @@ import type { Order } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { EmptyState, ErrorState } from '../components/States';
 import { ShipmentChip } from '../components/ShipmentTracking';
-import { ORDER_STATUS, PAYMENT_STATUS, canPayOnline, orderNumber, paymentLabel } from '../lib/orders';
+import { ORDER_STATUS, PAYMENT_STATUS, canPayOnline, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
+import { SHIPMENT_METHOD } from '../lib/shipments';
 import { cn, formatCurrency, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -47,10 +48,11 @@ export function OrderRow({ order }: { order: Order }) {
           </div>
           <p className="mt-1 text-sm text-ink-500">
             {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
+            {order.shippingMethod === 'DELIVERY' && <> · {SHIPMENT_METHOD.DELIVERY}</>}
           </p>
         </div>
         <span className="flex shrink-0 flex-col items-end text-right">
-          <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(order.totalPrice)}</span>
+          <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(orderTotal(order))}</span>
           {saved > 0 && <span className="text-xs font-medium text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
         </span>
         <Chevron className="size-5 shrink-0 text-ink-400 group-hover:text-brand-500" />

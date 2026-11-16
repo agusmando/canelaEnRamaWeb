@@ -134,7 +134,14 @@ export interface CartItem {
   productVariant: ProductVariant & { product?: Product };
   available: boolean;
   enoughStock: boolean;
-  quote: { unitPrice: number; total: number; discount: number; offerType: string };
+  quote: {
+    unitPrice: number;
+    total: number;
+    discount: number;
+    offerType: string;
+    /** Oferta por cantidad que todavía no se alcanza (`missing` en paquetes, unidades o kg). */
+    offerHint?: { label: string; missing: number; unit: 'pack' | 'unit' | 'kg' } | null;
+  };
 }
 
 export interface Cart {
@@ -206,6 +213,14 @@ export interface Order {
   orderItems?: OrderItem[];
   /** Envío asociado (solo en `GET /order/:id` y `/order/mine`). */
   shipment?: Shipment | null;
+  /** Retiro en el local o envío a domicilio (pedidos viejos: PICKUP). */
+  shippingMethod?: ShipmentMethod;
+  /** Costo del envío. `totalPrice` es solo productos: lo que se paga es `totalPrice + shippingCost`. */
+  shippingCost?: number;
+  /** 'uber' | 'own' | null */
+  shippingProvider?: string | null;
+  /** Departamento de destino. */
+  shippingZone?: string | null;
 }
 
 // ---------------------------------------------------------------- Envíos
@@ -256,6 +271,60 @@ export interface Shipment {
   updatedAt: ISODate;
   /** Ordenados por fecha ascendente. */
   events: ShipmentEvent[];
+}
+
+/** `GET /shipping/config` (público). */
+export interface ShippingConfig {
+  /** Solo las zonas activas. */
+  zones: { name: string; price: number; etaMinutes: number | null }[];
+  /** Todos los departamentos válidos (para el select del domicilio). */
+  departments: string[];
+  providers: { uber: boolean };
+  pickup: { name: string; address: string };
+}
+
+/** Domicilio de entrega guardado del cliente (`GET|PUT /shipping/address`). */
+export interface UserAddress {
+  id: Id;
+  userSuperTokensId: string;
+  recipientName: string;
+  phone: string;
+  street: string;
+  number: string;
+  apartment: string | null;
+  /** Departamento (uno de `ShippingConfig.departments`). */
+  zone: string;
+  city: string | null;
+  province: string;
+  postalCode: string | null;
+  notes: string | null;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface UserAddressInput {
+  recipientName: string;
+  phone: string;
+  street: string;
+  number: string;
+  apartment?: string;
+  zone: string;
+  city?: string;
+  postalCode?: string;
+  notes?: string;
+}
+
+/** `GET /shipping/quote?value=` — costo del envío a domicilio para el total de productos. */
+export interface ShippingQuote {
+  available: boolean;
+  provider: 'uber' | 'own' | null;
+  price: number;
+  currency: 'ARS';
+  etaMinutes: number | null;
+  zone: string | null;
+  providerQuoteId: string | null;
+  /** Mensaje listo para mostrar cuando no está disponible. */
+  reason: string | null;
 }
 
 /** Seguimiento público (`GET /shipment/track/:code`): sin datos personales. */

@@ -221,7 +221,8 @@ export const restoreSession = createAsyncThunk<User, void, { rejectValue: string
     try {
       return await fetchMe();
     } catch (e) {
-      tokens.clear();
+      // 401 ya lo resolvió el cliente (intentó renovar y, si no pudo, limpió los tokens).
+      // Errores de red / cold start del backend: conservamos los tokens para el próximo intento.
       return rejectWithValue(rejectMsg(e, 'Sesión inválida'));
     }
   },
@@ -230,7 +231,7 @@ export const restoreSession = createAsyncThunk<User, void, { rejectValue: string
 export const signOut = createAsyncThunk('auth/signOut', async (_, { dispatch }) => {
   await request({ url: '/auth/signout', method: 'POST' }).catch(() => undefined);
   tokens.clear();
-  dispatch(shopApi.util.invalidateTags(['Cart', 'Order']));
+  dispatch(shopApi.util.invalidateTags(['Cart', 'Order', 'Address', 'ShippingQuote']));
 });
 
 const authSlice = createSlice({

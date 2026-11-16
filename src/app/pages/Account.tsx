@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
-import { LogOut, Package, User } from 'lucide-react';
+import { LogOut, MapPin, Package, User } from 'lucide-react';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { useAppDispatch, useAppSelector } from '../store';
 import { signOut } from '../store/authSlice';
@@ -33,6 +33,9 @@ export default function Account() {
           <nav className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
             <NavLink to="/mi-cuenta" end className={link}>
               <User className="size-4" /> Mis datos
+            </NavLink>
+            <NavLink to="/mi-cuenta/domicilio" className={link}>
+              <MapPin className="size-4" /> Mi domicilio
             </NavLink>
             <NavLink to="/mi-cuenta/pedidos" className={link}>
               <Package className="size-4" /> Mis pedidos
