@@ -16,10 +16,10 @@ export function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="mb-5 flex items-end justify-between gap-4">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
       <div className="min-w-0">
         <h2 className="flex items-center gap-2.5 text-2xl font-medium tracking-tight text-ink-800 sm:text-[26px]">
-          {icon && <span className="flex size-9 items-center justify-center rounded-full bg-brand-100 text-brand-500">{icon}</span>}
+          {icon && <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-500">{icon}</span>}
           {title}
         </h2>
         {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}

@@ -176,16 +176,16 @@ export default function Catalog() {
 
       <BannerStrip className="mb-6 sm:mb-8" />
 
-      <div className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-10">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
         <aside className="hidden lg:block">
-          <h1 className="text-2xl font-semibold text-ink-800">{title}</h1>
+          <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
           <p className="mt-3 text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(filtered.length)} resultados`}</p>
           <div className="mt-5 border-t border-ink-200">{filters}</div>
         </aside>
 
-        <div>
+        <div className="min-w-0">
           <div className="mb-3 lg:hidden">
-            <h1 className="text-2xl font-semibold text-ink-800">{title}</h1>
+            <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
             <p className="mt-1 text-sm text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(filtered.length)} resultados`}</p>
           </div>
 
@@ -194,19 +194,19 @@ export default function Catalog() {
               <SlidersHorizontal className="size-4" /> Filtros {chips.length > 0 && <span className="rounded-full bg-brand-500 px-1.5 text-xs text-white">{chips.length}</span>}
             </button>
             {chips.length > 0 && (
-              <button onClick={clearAll} className="btn-ghost h-8 px-2.5 text-sm text-ink-600">
+              <button onClick={clearAll} className="btn-ghost h-10 px-2.5 text-sm text-ink-600 lg:h-8">
                 <FilterX className="size-4" /> Borrar filtros
               </button>
             )}
             {chips.map((c) => (
-              <span key={c.label} className="inline-flex items-center gap-1 rounded-full bg-brand-50 py-1 pr-1 pl-3 text-sm font-medium text-brand-700 ring-1 ring-brand-200 ring-inset">
-                {c.label}
-                <button onClick={c.remove} aria-label={`Quitar filtro ${c.label}`} className="rounded-full p-0.5 transition-colors hover:bg-brand-500 hover:text-white">
+              <span key={c.label} className="inline-flex max-w-full items-center gap-1 rounded-full bg-brand-50 py-0.5 pr-0.5 pl-3 text-sm font-medium text-brand-700 ring-1 ring-brand-200 ring-inset">
+                <span className="min-w-0 truncate">{c.label}</span>
+                <button onClick={c.remove} aria-label={`Quitar filtro ${c.label}`} className="flex size-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-brand-500 hover:text-white">
                   <X className="size-3.5" />
                 </button>
               </span>
             ))}
-            <label className="ml-auto flex items-center gap-3 text-[15px] text-ink-800">
+            <label className="ml-auto flex items-center gap-3 text-base text-ink-800 sm:text-[15px]">
               <ArrowUpDown className="size-4 text-ink-400" />
               <span className="hidden sm:inline">Ordenar por</span>
               <span className="relative">
@@ -262,15 +262,21 @@ export default function Catalog() {
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
           <div className="absolute inset-0 bg-ink-900/40" onClick={() => setFiltersOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-white animate-fade-in">
-            <div className="flex items-center justify-between border-b border-ink-100 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-ink-100 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
               <p className="text-lg font-semibold">Filtros</p>
               <button onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros" className="btn-icon">
                 <X className="size-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-5">{filters}</div>
-            <div className="border-t border-ink-100 p-4">
-              <button onClick={() => setFiltersOpen(false)} className="btn-primary h-12 w-full">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5">{filters}</div>
+            <div className="border-t border-ink-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <button
+                onClick={() => {
+                  setFiltersOpen(false);
+                  window.scrollTo({ top: 0 });
+                }}
+                className="btn-primary h-12 w-full"
+              >
                 Ver {filtered.length} resultados
               </button>
             </div>
@@ -348,7 +354,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
     <section className="py-5">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between text-left text-[17px] font-medium text-ink-800">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-10 w-full items-center justify-between text-left text-[17px] font-medium text-ink-800 lg:min-h-0">
         {title}
         <ChevronDown className={cn('size-5 transition-transform', !open && '-rotate-90')} />
       </button>
@@ -359,7 +365,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 function FilterRow({ checked, onChange, label, count }: { checked: boolean; onChange: () => void; label: string; count?: number }) {
   return (
-    <label className="group flex cursor-pointer items-center gap-3 py-1 text-[15px] text-ink-700">
+    <label className="group flex cursor-pointer items-center gap-3 py-2 text-[15px] text-ink-700 lg:py-1">
       <input type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
       <span
         className={cn(
@@ -369,7 +375,7 @@ function FilterRow({ checked, onChange, label, count }: { checked: boolean; onCh
       >
         {checked && <Check className="size-3.5" strokeWidth={3} />}
       </span>
-      <span className={cn('flex-1', checked && 'font-medium text-ink-800')}>{label}</span>
+      <span className={cn('min-w-0 flex-1 break-words', checked && 'font-medium text-ink-800')}>{label}</span>
       {count !== undefined && <span className="text-ink-400">({count})</span>}
     </label>
   );

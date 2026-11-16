@@ -64,7 +64,7 @@ export default function Register() {
 
   return (
     <AuthShell>
-      <h1 className="text-4xl font-semibold text-ink-800 sm:text-[44px]">Crear cuenta</h1>
+      <h1 className="text-3xl font-semibold text-ink-800 sm:text-[44px]">Crear cuenta</h1>
       <p className="mt-6 text-lg text-ink-800">
         ¿Ya tenés cuenta?{' '}
         <Link to="/login" state={{ from: returnTo }} className="inline-flex items-center gap-2 font-semibold hover:text-brand-500">

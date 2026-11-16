@@ -90,7 +90,7 @@ export function ProductReviews({ product, variant, multiVariant }: { product: Pr
         <SectionHeader title="Opiniones de clientes" />
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-14">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-14">
         <div className="space-y-6">
           {loadingSummary ? (
             <div className="skeleton h-56 rounded-xl" />
@@ -290,7 +290,7 @@ function ReviewItem({ review: r }: { review: Review }) {
       <article aria-label={`Opinión de ${r.authorName}`}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Stars value={r.rating} className="text-base" />
-          {r.title && <h3 className="font-semibold text-ink-800">{r.title}</h3>}
+          {r.title && <h3 className="min-w-0 font-semibold break-words text-ink-800">{r.title}</h3>}
         </div>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
           <span className="font-medium text-ink-700">{r.authorName}</span>
@@ -308,13 +308,13 @@ function ReviewItem({ review: r }: { review: Review }) {
             </span>
           )}
         </p>
-        {r.comment && <p className="mt-2.5 leading-relaxed whitespace-pre-line text-ink-700">{r.comment}</p>}
+        {r.comment && <p className="mt-2.5 leading-relaxed break-words whitespace-pre-line text-ink-700">{r.comment}</p>}
         {r.reply && (
           <div className="mt-3 rounded-lg border-l-4 border-brand-300 bg-brand-50 px-4 py-3">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-800">
               <Store className="size-4 text-brand-500" /> Respuesta de Canela en Rama
             </p>
-            <p className="mt-1 text-sm leading-relaxed whitespace-pre-line text-ink-700">{r.reply}</p>
+            <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-line text-ink-700">{r.reply}</p>
           </div>
         )}
       </article>
@@ -439,13 +439,13 @@ function MyReview({ productId, entry, onEdit }: { productId: Id; entry: ReviewEl
       </div>
       <p className="mt-1 text-xs text-ink-500">{entry.variantName}</p>
       {r.title && <p className="mt-1 font-medium text-ink-800">{r.title}</p>}
-      {r.comment && <p className="mt-0.5 line-clamp-3 text-ink-600">{r.comment}</p>}
+      {r.comment && <p className="mt-0.5 line-clamp-3 break-words text-ink-600">{r.comment}</p>}
       {r.status === 'REJECTED' && r.rejectionReason && <p className="mt-1 text-xs text-brand-600">Motivo: {r.rejectionReason}</p>}
       <div className="mt-2 flex gap-1">
-        <button type="button" onClick={onEdit} className="btn-ghost h-8 px-2 text-xs">
+        <button type="button" onClick={onEdit} className="btn-ghost h-9 px-2 text-xs">
           <Pencil className="size-3.5" /> Editar
         </button>
-        <button type="button" onClick={doRemove} disabled={removing} className="btn-ghost h-8 px-2 text-xs text-brand-600 hover:bg-brand-50 hover:text-brand-700">
+        <button type="button" onClick={doRemove} disabled={removing} className="btn-ghost h-9 px-2 text-xs text-brand-600 hover:bg-brand-50 hover:text-brand-700">
           {removing ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />} Eliminar
         </button>
       </div>
@@ -518,7 +518,7 @@ function ReviewForm({
   };
 
   return (
-    <form ref={ref} onSubmit={submit} noValidate aria-labelledby={`${uid}-h`} className="scroll-mt-40 rounded-xl border border-ink-200 p-5 shadow-card sm:p-6">
+    <form ref={ref} onSubmit={submit} noValidate aria-labelledby={`${uid}-h`} className="scroll-mt-40 rounded-xl border border-ink-200 p-4 shadow-card sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <h3 id={`${uid}-h`} ref={heading} tabIndex={-1} className="text-lg font-semibold text-ink-800 focus:outline-none">
           {editing ? 'Editar tu opinión' : 'Escribir una opinión'}

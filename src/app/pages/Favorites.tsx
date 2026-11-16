@@ -47,8 +47,8 @@ export default function Favorites() {
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-3 text-3xl font-semibold text-ink-800">
-            <span className="flex size-11 items-center justify-center rounded-full bg-brand-100 text-brand-500">
+          <h1 className="flex items-center gap-3 text-[28px] leading-tight font-semibold text-ink-800 sm:text-3xl">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-500">
               <Heart className="size-5 fill-current" />
             </span>
             Mis favoritos
@@ -60,7 +60,7 @@ export default function Favorites() {
           )}
         </div>
         {quick.length > 0 && (
-          <button onClick={addAll} disabled={adding} className="btn-primary h-11 px-5">
+          <button onClick={addAll} disabled={adding} className="btn-primary min-h-11 w-full px-5 py-2 text-center whitespace-normal sm:w-auto">
             {adding ? <Spinner className="size-4" /> : <ShoppingCart className="size-4" />}
             Agregar {quick.length === products.length ? 'todos' : `${quick.length} disponibles`} al carrito
           </button>
@@ -88,7 +88,7 @@ export default function Favorites() {
       {missing.length > 0 && (
         <button
           onClick={() => missing.forEach((id) => dispatch(removeFavorite(id)))}
-          className="btn-ghost mt-6 px-3 py-2 text-sm text-ink-500"
+          className="btn-ghost mt-6 px-3 py-2 text-left text-sm whitespace-normal text-ink-500"
         >
           <Trash2 className="size-4" /> Quitar {missing.length} producto{missing.length === 1 ? '' : 's'} que ya no está{missing.length === 1 ? '' : 'n'} disponible{missing.length === 1 ? '' : 's'}
         </button>

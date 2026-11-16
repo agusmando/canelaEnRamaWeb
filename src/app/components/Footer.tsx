@@ -11,8 +11,8 @@ export function Footer() {
 
   return (
     <footer className="mt-16 bg-ink-800 text-white/80">
-      <div className="mx-auto grid max-w-[1440px] gap-10 px-6 py-12 sm:px-8 lg:grid-cols-[1.3fr_1.4fr_auto_1fr_auto] lg:gap-12">
-        <div>
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-10 px-6 pt-12 pb-24 sm:grid-cols-2 sm:px-8 sm:pb-12 lg:grid-cols-[1.3fr_1.4fr_auto_1fr_auto] lg:gap-12">
+        <div className="sm:col-span-2 lg:col-span-1">
           <Logo variant="white" className="h-14" />
           <p className="mt-6 max-w-sm text-sm leading-relaxed">
             Canela en Rama – almacén natural {new Date().getFullYear()}. Todos los derechos reservados.
@@ -21,7 +21,7 @@ export function Footer() {
             Bienvenidos a nuestra tienda online. Frutos secos, harinas, especias, productos sin TACC y mucho más, a granel
             y fraccionados con la calidad de siempre.
           </p>
-          <a href={CONTACT.mapsUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-3 font-semibold text-white hover:underline">
+          <a href={CONTACT.mapsUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-start gap-3 font-semibold text-white hover:underline sm:items-center">
             <MapPin className="size-5 shrink-0" />
             {CONTACT.address}
           </a>
@@ -32,7 +32,7 @@ export function Footer() {
           <ul className="columns-2 gap-6 text-sm sm:columns-3">
             {categories.map((c) => (
               <li key={c.id} className="mb-2.5 break-inside-avoid">
-                <Link to={`/productos?categoria=${slugify(c.name)}`} className="hover:text-white hover:underline">
+                <Link to={`/productos?categoria=${slugify(c.name)}`} className="inline-block py-0.5 break-words hover:text-white hover:underline">
                   {c.name}
                 </Link>
               </li>
@@ -52,7 +52,7 @@ export function Footer() {
               ['/seguimiento', 'Seguí tu envío'],
             ].map(([to, label]) => (
               <li key={to}>
-                <Link to={to} className="whitespace-nowrap hover:text-white hover:underline">
+                <Link to={to} className="inline-block py-0.5 whitespace-nowrap hover:text-white hover:underline">
                   {label}
                 </Link>
               </li>
@@ -76,7 +76,7 @@ export function Footer() {
         <div>
           <h2 className="mb-4 font-semibold tracking-wide text-white uppercase">Contacto</h2>
           <a href={whatsappLink()} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 text-sm whitespace-nowrap hover:text-white">
-            <span className="flex size-9 items-center justify-center rounded-full bg-white/10">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10">
               <Phone className="size-4" />
             </span>
             {CONTACT.phone}

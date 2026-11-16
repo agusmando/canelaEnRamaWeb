@@ -12,25 +12,25 @@ export default function Account() {
   const navigate = useNavigate();
   const name = user.name?.trim() || user.email?.split('@')[0] || 'Cliente';
   const link = ({ isActive }: { isActive: boolean }) =>
-    cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition-colors', isActive ? 'bg-brand-50 font-medium text-brand-600' : 'text-ink-700 hover:bg-ink-50');
+    cn('flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 whitespace-nowrap text-[15px] transition-colors', isActive ? 'bg-brand-50 font-medium text-brand-600' : 'text-ink-700 hover:bg-ink-50');
 
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ label: 'Mi cuenta' }]} />
-      <div className="grid gap-8 lg:grid-cols-[260px_1fr] lg:gap-12">
-        <aside className="space-y-6">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-12">
+        <aside className="min-w-0 space-y-6">
           <div className="flex items-center gap-3">
             {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" referrerPolicy="no-referrer" className="size-14 rounded-full object-cover" />
+              <img src={user.avatarUrl} alt="" referrerPolicy="no-referrer" className="size-14 shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="flex size-14 items-center justify-center rounded-full bg-brand-100 text-xl font-semibold text-brand-600 uppercase">{name[0]}</span>
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xl font-semibold text-brand-600 uppercase">{name[0]}</span>
             )}
             <div className="min-w-0">
               <p className="truncate text-lg font-semibold text-ink-800">Hola, {name.split(' ')[0]}</p>
               <p className="truncate text-sm text-ink-500">Cliente desde {formatDate(user.createdAt)}</p>
             </div>
           </div>
-          <nav className="flex gap-1 lg:flex-col">
+          <nav className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
             <NavLink to="/mi-cuenta" end className={link}>
               <User className="size-4" /> Mis datos
             </NavLink>
@@ -38,7 +38,8 @@ export default function Account() {
               <Package className="size-4" /> Mis pedidos
             </NavLink>
             <button
-              className={link({ isActive: false })}
+              aria-label="Cerrar sesión"
+              className={cn(link({ isActive: false }), 'ml-auto shrink-0 lg:ml-0')}
               onClick={async () => {
                 await dispatch(signOut());
                 navigate('/');

@@ -38,7 +38,7 @@ export default function Tracking() {
       <Breadcrumbs items={[{ label: 'Seguimiento de envío' }]} />
       <div className="max-w-3xl">
         <h1 className="text-3xl font-semibold text-ink-800 sm:text-4xl">Seguí tu envío</h1>
-        <p className="mt-3 text-lg text-ink-600">Ingresá el código de seguimiento que te enviamos (por ejemplo, CER-7X4K9P2Q).</p>
+        <p className="mt-3 text-ink-600 sm:text-lg">Ingresá el código de seguimiento que te enviamos (por ejemplo, CER-7X4K9P2Q).</p>
 
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3 sm:flex-row" role="search" aria-label="Buscar envío">
           <label htmlFor="tracking-code" className="sr-only">
@@ -82,7 +82,7 @@ export default function Tracking() {
               title="No encontramos un envío con ese código"
               className="rounded-xl border border-ink-200"
               action={
-                <a href={whatsappLink(`Hola! No encuentro mi envío con el código ${code}`)} target="_blank" rel="noreferrer" className="btn-outline h-11 px-5">
+                <a href={whatsappLink(`Hola! No encuentro mi envío con el código ${code}`)} target="_blank" rel="noreferrer" className="btn-outline min-h-11 px-5 py-2 text-center whitespace-normal">
                   <MessageCircle className="size-4" /> Consultanos por WhatsApp
                 </a>
               }

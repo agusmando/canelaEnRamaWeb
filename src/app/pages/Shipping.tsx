@@ -16,12 +16,12 @@ export default function Shipping() {
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ label: 'Envíos' }]} />
-      <h1 className="text-4xl font-semibold text-ink-800">Envíos y retiros</h1>
-      <p className="mt-4 max-w-2xl text-lg text-ink-600">Llevamos tu pedido a domicilio en el Gran Mendoza o lo podés retirar sin cargo por nuestro local.</p>
+      <h1 className="text-3xl font-semibold text-ink-800 sm:text-4xl">Envíos y retiros</h1>
+      <p className="mt-4 max-w-2xl text-ink-600 sm:text-lg">Llevamos tu pedido a domicilio en el Gran Mendoza o lo podés retirar sin cargo por nuestro local.</p>
 
       <ol className="mt-10 grid gap-5 md:grid-cols-3">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="rounded-xl border border-ink-200 p-6">
+          <li key={s.title} className="rounded-xl border border-ink-200 p-5 sm:p-6">
             <span className="flex size-11 items-center justify-center rounded-full bg-brand-500 text-white">
               <s.icon className="size-5" />
             </span>
@@ -35,7 +35,7 @@ export default function Shipping() {
       <TrackShipmentCta className="mt-10" />
 
       <div className="mt-10 grid gap-5 md:grid-cols-2">
-        <section className="rounded-xl bg-brand-50 p-6">
+        <section className="rounded-xl bg-brand-50 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">
             <Truck className="size-5 text-brand-500" /> Envío a domicilio
           </h2>
@@ -45,7 +45,7 @@ export default function Shipping() {
             <li>Coordinamos día y franja horaria con vos.</li>
           </ul>
         </section>
-        <section className="rounded-xl bg-ink-50 p-6">
+        <section className="rounded-xl bg-ink-50 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">
             <Store className="size-5 text-brand-500" /> Retiro en el local
           </h2>
@@ -54,7 +54,7 @@ export default function Shipping() {
             <li>Te avisamos cuando el pedido está listo para retirar.</li>
           </ul>
         </section>
-        <section className="rounded-xl border border-ink-200 p-6">
+        <section className="rounded-xl border border-ink-200 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">
             <CalendarClock className="size-5 text-brand-500" /> Productos por encargo
           </h2>
@@ -63,7 +63,7 @@ export default function Shipping() {
             fecha estimada aparece en tu pedido.
           </p>
         </section>
-        <section className="rounded-xl border border-ink-200 p-6">
+        <section className="rounded-xl border border-ink-200 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">
             <CreditCard className="size-5 text-brand-500" /> Medios de pago
           </h2>
@@ -71,9 +71,9 @@ export default function Shipping() {
         </section>
       </div>
 
-      <div className="mt-10 flex flex-col items-start gap-4 rounded-xl border border-ink-200 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-10 flex flex-col items-start gap-4 rounded-xl border border-ink-200 p-5 sm:flex-row sm:p-6 sm:items-center sm:justify-between">
         <p className="text-lg text-ink-800">¿Tenés una consulta sobre tu envío?</p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <a href={whatsappLink('Hola! Tengo una consulta sobre envíos.')} target="_blank" rel="noreferrer" className="btn-outline h-11 px-5">
             <MessageCircle className="size-4" /> WhatsApp
           </a>

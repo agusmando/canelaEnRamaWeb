@@ -1,15 +1,51 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { ImageOff, Search } from 'lucide-react';
-import { useCatalogQuery } from '../api/shopApi';
-import { cardPrice, normalize, productImages } from '../lib/shop';
+import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
+import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
+import { cardPrice, normalize, productImages, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 
+/** Resalta en `text` la parte que coincide con `term` (sin distinguir mayúsculas ni tildes). */
+function Highlight({ text, term }: { text: string; term: string }) {
+  const t = normalize(term.trim());
+  if (t.length < 2) return <>{text}</>;
+  // Mapa carácter a carácter para recuperar la posición en el texto original
+  const chars = [...text];
+  const norm = chars.map((c) => normalize(c));
+  const joined = norm.join('');
+  const at = joined.indexOf(t);
+  if (at < 0) return <>{text}</>;
+  let pos = 0;
+  let start = -1;
+  let end = chars.length;
+  for (let i = 0; i < chars.length; i++) {
+    if (start < 0 && pos >= at) start = i;
+    pos += norm[i].length;
+    if (pos >= at + t.length) {
+      end = i + 1;
+      break;
+    }
+  }
+  if (start < 0) return <>{text}</>;
+  return (
+    <>
+      {chars.slice(0, start).join('')}
+      <mark className="rounded-sm bg-brand-100 px-px font-semibold text-brand-700">{chars.slice(start, end).join('')}</mark>
+      {chars.slice(end).join('')}
+    </>
+  );
+}
+
+const isTyping = (el: Element | null) =>
+  !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el as HTMLElement).isContentEditable);
+
 /** Buscador del header con sugerencias instantáneas sobre el catálogo. */
-export function SearchBox({ className, onDone }: { className?: string; onDone?: () => void }) {
+export function SearchBox({ className, onDone, shortcut = false }: { className?: string; onDone?: () => void; shortcut?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: catalog } = useCatalogQuery();
+  const { data: categories } = useCategoriesQuery();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') ?? '');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -29,6 +65,21 @@ export function SearchBox({ className, onDone }: { className?: string; onDone?: 
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
+
+  // Atajo "/" para enfocar el buscador (solo escritorio)
+  useEffect(() => {
+    if (!shortcut) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isTyping(document.activeElement)) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shortcut]);
+
+  const term = q.trim();
+  const searching = normalize(term).length >= 2;
 
   const results = useMemo(() => {
     const term = normalize(q.trim());
@@ -53,6 +104,11 @@ export function SearchBox({ className, onDone }: { className?: string; onDone?: 
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      if (!open && q) setQ('');
+      setOpen(false);
+      return;
+    }
     if (!open || !results.length) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -65,11 +121,29 @@ export function SearchBox({ className, onDone }: { className?: string; onDone?: 
     }
   };
 
+  const clear = () => {
+    setQ('');
+    setActive(-1);
+    setOpen(true);
+    inputRef.current?.focus();
+  };
+
+  const showResults = open && searching && !!catalog;
+  const showCategories = open && !term && (categories?.length ?? 0) > 0;
+
   return (
     <div ref={boxRef} className={cn('relative', className)}>
-      <form role="search" onSubmit={submit}>
+      <form role="search" onSubmit={submit} className="group relative">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-ink-400 transition-colors group-focus-within:text-brand-500"
+        />
         <input
+          ref={inputRef}
           type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          spellCheck={false}
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -78,62 +152,127 @@ export function SearchBox({ className, onDone }: { className?: string; onDone?: 
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder='Buscá "Sin TACC", "Harinas", "Snacks"…'
+          placeholder="Buscá productos, marcas o categorías"
           aria-label="Buscar productos"
           role="combobox"
-          aria-expanded={open && results.length > 0}
+          aria-autocomplete="list"
+          aria-expanded={showResults && results.length > 0}
           aria-controls={listId}
           aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-          className="h-11 w-full rounded-full border border-transparent bg-ink-100 pr-12 pl-5 text-[15px] text-ink-800 placeholder:text-ink-400 transition-colors focus:border-brand-300 focus:bg-white focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+          className={cn(
+            'h-11 w-full rounded-full border border-ink-200 bg-ink-50 pl-11 text-base text-ink-800 transition-[background-color,border-color,box-shadow] md:text-[15px]',
+            'placeholder:text-ink-400 hover:border-ink-300 hover:bg-white',
+            'focus:border-brand-400 focus:bg-white focus:shadow-[0_0_0_4px_rgb(204_59_29/0.12)] focus:outline-none',
+            '[&::-webkit-search-cancel-button]:hidden',
+            q ? 'pr-11' : shortcut ? 'pr-12' : 'pr-4',
+          )}
         />
-        <button type="submit" aria-label="Buscar" className="absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-ink-400 hover:text-brand-500">
-          <Search className="size-5" />
-        </button>
+        {q ? (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label="Borrar búsqueda"
+            className="absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+          >
+            <X className="size-4" />
+          </button>
+        ) : (
+          shortcut && (
+            <kbd
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 rounded-md border border-ink-200 bg-white px-1.5 font-sans text-xs text-ink-400 transition-opacity group-focus-within:opacity-0"
+            >
+              /
+            </kbd>
+          )
+        )}
       </form>
 
-      {open && results.length > 0 && (
-        <ul
-          id={listId}
-          role="listbox"
-          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-ink-200 bg-white py-1 shadow-lift animate-fade-in"
+      {(showResults || showCategories) && (
+        <div
+          className="absolute inset-x-0 top-full z-50 mt-2 max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain rounded-2xl border border-ink-200 bg-white py-1.5 shadow-lift animate-fade-in"
         >
-          {results.map((p, i) => {
-            const info = cardPrice(p);
-            const img = productImages(p)[0];
-            return (
-              <li key={p.id} id={`${listId}-${i}`} role="option" aria-selected={i === active}>
-                <Link
-                  to={`/producto/${p.id}`}
-                  onClick={() => {
-                    setOpen(false);
-                    onDone?.();
-                  }}
-                  onMouseEnter={() => setActive(i)}
-                  className={cn('flex items-center gap-3 px-3 py-2', i === active && 'bg-brand-50')}
-                >
-                  <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-ink-100 text-ink-300">
-                    {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-5" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-ink-800">{p.name}</span>
-                    <span className="block truncate text-xs text-ink-500">{p.Category?.name}</span>
-                  </span>
-                  {info && (
-                    <span className="shrink-0 text-sm font-semibold text-ink-800">
-                      {formatCurrency(info.price)}
-                      <span className="text-xs font-normal text-ink-500"> x {info.unitLabel}</span>
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-          <li>
-            <button type="button" onClick={() => submit(undefined, true)} className="w-full border-t border-ink-100 px-3 py-2.5 text-left text-sm font-medium text-brand-500 hover:bg-brand-50">
-              Ver todos los resultados para “{q.trim()}”
+          {showCategories ? (
+            <div className="px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-ink-400 uppercase">Explorá por categoría</p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {categories!.slice(0, 8).map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/productos?categoria=${slugify(c.name)}`}
+                    onClick={() => {
+                      setOpen(false);
+                      onDone?.();
+                    }}
+                    className="rounded-full border border-ink-200 px-3 py-1.5 text-sm text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600"
+                  >
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : results.length === 0 ? (
+            <div className="flex flex-col items-center px-4 py-6 text-center">
+              <SearchX className="size-7 text-ink-300" />
+              <p className="mt-2 text-sm text-ink-700">
+                No encontramos productos para <span className="font-semibold break-all">“{term}”</span>
+              </p>
+              <p className="mt-1 text-xs text-ink-500">Probá con otra palabra o revisá la ortografía.</p>
+            </div>
+          ) : (
+            <>
+              <p className="px-4 pt-1.5 pb-1 text-xs font-semibold tracking-wide text-ink-400 uppercase">Productos</p>
+              <ul id={listId} role="listbox" aria-label="Sugerencias">
+                {results.map((p, i) => {
+                  const info = cardPrice(p);
+                  const img = productImages(p)[0];
+                  return (
+                    <li key={p.id} id={`${listId}-${i}`} role="option" aria-selected={i === active}>
+                      <Link
+                        to={`/producto/${p.id}`}
+                        onClick={() => {
+                          setOpen(false);
+                          onDone?.();
+                        }}
+                        onMouseEnter={() => setActive(i)}
+                        className={cn('mx-1.5 flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors', i === active && 'bg-brand-50')}
+                      >
+                        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300">
+                          {img ? <img src={img} alt="" loading="lazy" className="size-full object-cover" /> : <ImageOff className="size-5" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm text-ink-800">
+                            <Highlight text={p.name} term={term} />
+                          </span>
+                          <span className="block truncate text-xs text-ink-500">
+                            {[p.Category?.name, p.Brand?.name].filter(Boolean).join(' · ')}
+                          </span>
+                        </span>
+                        {info && (
+                          <span className="shrink-0 text-right text-sm font-semibold text-ink-800 tabular-nums">
+                            {formatCurrency(info.price)}
+                            <span className="block text-xs font-normal text-ink-500">x {info.unitLabel}</span>
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+          {showResults && (
+            <button
+              type="button"
+              onClick={() => submit(undefined, true)}
+              className="mt-1 flex w-full items-center gap-2 border-t border-ink-100 px-4 pt-3 pb-2 text-left text-sm font-medium text-brand-500 hover:text-brand-600"
+            >
+              <Search className="size-4 shrink-0" />
+              <span className="min-w-0 truncate">Ver todos los resultados para “{term}”</span>
+              <ArrowRight className="ml-auto size-4 shrink-0" />
             </button>
-          </li>
-        </ul>
+          )}
+        </div>
       )}
     </div>
   );

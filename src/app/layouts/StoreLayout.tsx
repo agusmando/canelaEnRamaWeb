@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useNavigationType } from 'react-router';
 import { AnnouncementBar } from '../components/AnnouncementBar';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -7,10 +7,15 @@ import { CartDrawer } from '../components/CartDrawer';
 import { WhatsAppButton } from '../components/WhatsAppButton';
 
 export function StoreLayout() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const navType = useNavigationType();
+  // Arriba de todo al cambiar de página, y también al navegar con un link a la misma página
+  // con otros filtros (p. ej. elegir una categoría desde el menú estando en /productos).
+  // Los filtros del catálogo usan `replace`, así que tildar un checkbox no mueve la página.
+  const pushKey = navType === 'PUSH' ? search : '';
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [pathname]);
+  }, [pathname, pushKey]);
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -154,6 +154,17 @@ function Hero() {
   const [paused, setPaused] = useState(false);
   const n = slides.length;
   const go = (d: number) => setI((x) => (x + d + n) % n);
+  // Deslizar con el dedo en mobile (las flechas se ocultan por debajo de sm).
+  const touchX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null || n < 2) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+  };
 
   useEffect(() => {
     setI((x) => (x < n ? x : 0));
@@ -178,6 +189,8 @@ function Hero() {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       <div className="flex transition-transform duration-700 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>
         {slides.map((s, idx) => (
@@ -221,7 +234,7 @@ function Hero() {
                 onClick={() => setI(idx)}
                 aria-label={`Ir a la diapositiva ${idx + 1}`}
                 aria-current={idx === i}
-                className={cn('h-2 rounded-full transition-all', idx === i ? 'w-6 bg-brand-500' : 'w-2 bg-ink-300 hover:bg-ink-400')}
+                className={cn('relative h-2 rounded-full transition-all after:absolute after:-inset-x-1 after:-inset-y-3', idx === i ? 'w-6 bg-brand-500' : 'w-2 bg-ink-300 hover:bg-ink-400')}
               />
             ))}
           </div>
@@ -243,7 +256,7 @@ function GradientSlide({ slide: s, active }: { slide: HeroSlide; active: boolean
         <div className="relative z-10 max-w-xl">
           {s.eyebrow && <p className={cn('text-sm font-semibold tracking-wider uppercase', custom ? 'opacity-80' : 'text-brand-500')}>{s.eyebrow}</p>}
           {s.title && (
-            <h1 className={cn('mt-3 text-3xl leading-tight font-semibold tracking-tight sm:text-5xl', !custom && 'text-ink-800')}>{s.title}</h1>
+            <h1 className={cn('mt-3 text-[28px] leading-tight font-semibold tracking-tight sm:text-5xl', !custom && 'text-ink-800')}>{s.title}</h1>
           )}
           {s.text && <p className={cn('mt-4 max-w-md sm:text-lg', custom ? 'opacity-90' : 'text-ink-600')}>{s.text}</p>}
           {cta && (
@@ -283,13 +296,13 @@ function ImageSlide({ slide: s, banner, active, eager }: { slide: HeroSlide; ban
           className="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/55 via-black/15 to-transparent sm:items-center sm:bg-gradient-to-r sm:from-black/50 sm:via-black/20"
           style={{ color: banner.textColor ?? '#fff' }}
         >
-          <div className="container-page pb-12 sm:px-20 sm:pb-0">
+          <div className="container-page pb-10 sm:px-20 sm:pb-0">
             <div className="max-w-xl">
               {s.eyebrow && <p className="text-sm font-semibold tracking-wider uppercase opacity-90">{s.eyebrow}</p>}
-              {s.title && <h1 className="mt-2 text-3xl leading-tight font-semibold tracking-tight sm:mt-3 sm:text-5xl">{s.title}</h1>}
-              {s.text && <p className="mt-3 line-clamp-3 max-w-md opacity-90 sm:mt-4 sm:text-lg">{s.text}</p>}
+              {s.title && <h1 className="mt-2 text-2xl leading-tight font-semibold tracking-tight min-[400px]:text-3xl sm:mt-3 sm:text-5xl">{s.title}</h1>}
+              {s.text && <p className="mt-3 line-clamp-2 max-w-md text-sm opacity-90 min-[400px]:line-clamp-3 min-[400px]:text-base sm:mt-4 sm:text-lg">{s.text}</p>}
               {s.cta && (
-                <BannerLink href={s.cta.to} tabIndex={active ? 0 : -1} className="btn-primary pointer-events-auto mt-5 h-12 px-6 text-base sm:mt-7">
+                <BannerLink href={s.cta.to} tabIndex={active ? 0 : -1} className="btn-primary pointer-events-auto mt-4 h-11 px-5 text-base sm:mt-7 sm:h-12 sm:px-6">
                   {s.cta.label} <ArrowRight className="size-4" />
                 </BannerLink>
               )}

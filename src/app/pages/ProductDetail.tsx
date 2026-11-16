@@ -146,8 +146,8 @@ function ProductView({ product }: { product: Product }) {
           ]}
         />
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,540px)_1fr] lg:gap-14">
-          <div className="lg:sticky lg:top-36 lg:self-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,540px)_minmax(0,1fr)] lg:gap-14">
+          <div className="min-w-0 lg:sticky lg:top-36 lg:self-start">
             <Gallery images={images} name={product.name} badge={offer ? offerDescription(offer, variant?.contentMeasure) : null} />
           </div>
 
@@ -162,7 +162,7 @@ function ProductView({ product }: { product: Product }) {
                     {product.Brand.name}
                   </Link>
                 )}
-                <h1 className="mt-1 text-3xl font-medium tracking-tight text-ink-800 sm:text-[40px] sm:leading-tight">{product.name}</h1>
+                <h1 className="mt-1 text-[26px] leading-tight font-medium tracking-tight break-words text-ink-800 sm:text-[40px]">{product.name}</h1>
                 <RatingSummaryLink productId={product.id} className="mt-2" />
               </div>
               <div className="flex shrink-0 items-center gap-1 pt-1">
@@ -240,7 +240,7 @@ function ProductView({ product }: { product: Product }) {
                   <button
                     onClick={add}
                     disabled={!available || adding}
-                    className={cn('btn-primary h-13 shrink-0 rounded-xl px-8 text-[17px]', added && 'bg-leaf-500 hover:bg-leaf-600')}
+                    className={cn('btn-primary h-13 w-full shrink-0 rounded-xl px-8 text-[17px] sm:w-auto', added && 'bg-leaf-500 hover:bg-leaf-600')}
                   >
                     {adding ? <Spinner /> : added ? <Check className="size-5" strokeWidth={3} /> : <ShoppingCart className="size-5" />}
                     {!available ? 'Sin stock' : added ? '¡Agregado!' : 'Agregar al carrito'}
@@ -300,7 +300,7 @@ function InfoItem({ icon, children }: { icon: React.ReactNode; children: React.R
   return (
     <li className="flex items-center gap-3 rounded-xl bg-ink-50 px-3.5 py-3">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">{icon}</span>
-      <span>{children}</span>
+      <span className="min-w-0">{children}</span>
     </li>
   );
 }
@@ -337,7 +337,7 @@ function Gallery({ images, name, badge }: { images: string[]; name: string; badg
   return (
     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-5">
       {images.length > 1 && (
-        <div className="no-scrollbar flex gap-3 overflow-x-auto sm:w-[90px] sm:shrink-0 sm:flex-col">
+        <div className="no-scrollbar flex min-w-0 gap-3 overflow-x-auto sm:w-[90px] sm:shrink-0 sm:flex-col">
           {images.map((src, idx) => (
             <button
               key={src}
@@ -351,7 +351,7 @@ function Gallery({ images, name, badge }: { images: string[]; name: string; badg
           ))}
         </div>
       )}
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-ink-100">
+      <div className="relative aspect-square w-full min-w-0 overflow-hidden rounded-lg bg-ink-100">
         {current ? (
           <img src={current} alt={name} className="size-full object-cover animate-fade-in" key={current} />
         ) : (
@@ -395,7 +395,7 @@ function DetailSkeleton() {
   return (
     <div className="container-page" aria-busy>
       <div className="skeleton my-6 h-5 w-64" />
-      <div className="grid gap-10 lg:grid-cols-[560px_1fr]">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,540px)_minmax(0,1fr)]">
         <div className="skeleton aspect-square" />
         <div className="space-y-5">
           <div className="skeleton h-10 w-3/4" />

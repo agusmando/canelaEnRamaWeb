@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
+import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import {
   ChevronDown,
@@ -46,6 +47,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
   const location = useLocation();
 
   useEffect(() => {
@@ -73,8 +75,8 @@ export function Header() {
           <button className="btn-icon md:hidden" aria-label="Abrir menú" onClick={() => setMobileOpen(true)}>
             <Menu className="size-6" />
           </button>
-          <Logo className="h-8 sm:h-11" />
-          <SearchBox className="mx-auto hidden w-full max-w-[480px] md:block" />
+          <Logo className="h-7 min-[360px]:h-8 sm:h-11" />
+          <SearchBox shortcut className="mx-auto hidden w-full max-w-[480px] md:block" />
           <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5 md:ml-0">
             <FavoritesButton />
             <UserMenu />
@@ -110,7 +112,7 @@ export function Header() {
         </ul>
       </nav>
 
-      {mobileOpen && <MobileMenu onClose={() => setMobileOpen(false)} />}
+      <MobileMenu open={mobileOpen} onClose={closeMobile} />
     </header>
   );
 }
@@ -155,20 +157,20 @@ function CategoriesMenu() {
       </button>
       {open && (
         <div className="absolute top-full left-1/2 z-50 w-[min(720px,90vw)] -translate-x-1/2 pt-1 animate-fade-in">
-          <div className="grid grid-cols-3 gap-1 rounded-xl border border-ink-200 bg-white p-3 shadow-lift">
+          <div className="grid grid-cols-2 gap-1 rounded-xl border border-ink-200 bg-white p-3 shadow-lift lg:grid-cols-3">
             {(categories ?? []).map((c) => (
               <Link
                 key={c.id}
                 to={`/productos?categoria=${slugify(c.name)}`}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-brand-50 hover:text-brand-600"
               >
-                <span className="flex size-8 items-center justify-center rounded-md bg-brand-100 text-brand-500">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-brand-100 text-brand-500">
                   <CategoryIcon name={c.name} className="size-4" />
                 </span>
                 {c.name}
               </Link>
             ))}
-            <Link to="/productos" className="col-span-3 mt-1 flex items-center gap-2 rounded-lg border-t border-ink-100 px-3 pt-3 pb-1 text-sm font-medium text-brand-500 hover:underline">
+            <Link to="/productos" className="col-span-full mt-1 flex items-center gap-2 rounded-lg border-t border-ink-100 px-3 pt-3 pb-1 text-sm font-medium text-brand-500 hover:underline">
               <LayoutGrid className="size-4" /> Ver todos los productos
             </Link>
           </div>
@@ -312,27 +314,51 @@ function FavoritesButton() {
 
 // ---------------------------------------------------------------- Mobile
 
-function MobileMenu({ onClose }: { onClose: () => void }) {
+/**
+ * Menú lateral mobile (mismo efecto que el panel del dashboard): siempre montado,
+ * entra deslizándose desde la izquierda con fondo oscuro; cierra con Escape,
+ * tocando afuera o al elegir un link.
+ */
+function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: categories } = useCategoriesQuery();
   const [catsOpen, setCatsOpen] = useState(false);
   useEffect(() => {
+    if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
     };
-  }, []);
-  return (
-    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menú">
-      <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 flex w-[85%] max-w-sm flex-col bg-white shadow-xl animate-fade-in">
+  }, [open, onClose]);
+  // Portal a <body>: el <header> tiene backdrop-filter, que vuelve "fixed" relativo al header
+  // (el menú quedaba del alto del header en vez de ocupar toda la pantalla).
+  return createPortal(
+    <div className={cn('fixed inset-0 z-50 md:hidden', !open && 'pointer-events-none')} role="dialog" aria-modal="true" aria-label="Menú" aria-hidden={!open}>
+      <div
+        className={cn('absolute inset-0 bg-ink-900/40 transition-opacity duration-300', open ? 'opacity-100' : 'opacity-0')}
+        onClick={onClose}
+      />
+      <div
+        className={cn(
+          'absolute inset-y-0 left-0 flex w-[85%] max-w-sm flex-col bg-white pt-[env(safe-area-inset-top,0px)] shadow-xl transition-[translate,visibility] duration-300 ease-out',
+          // Tailwind v4: translate-x-* usa la propiedad `translate` (no `transform`).
+          // invisible: cerrado, sus links no reciben foco con Tab
+          open ? 'translate-x-0' : '-translate-x-full invisible',
+        )}
+      >
         <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3">
           <Logo className="h-9" />
           <button onClick={onClose} aria-label="Cerrar menú" className="btn-icon">
             <X className="size-6" />
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-3">
+        <nav
+          className="flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          onClick={(e) => (e.target as HTMLElement).closest('a') && onClose()}
+        >
           {NAV.slice(0, 2).map((n) => (
             <MobileLink key={n.to} to={n.to} end={n.end} icon={n.icon}>
               {n.label}
@@ -349,8 +375,8 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
           {catsOpen && (
             <div className="mb-2 grid grid-cols-2 gap-1 pl-4">
               {(categories ?? []).map((c) => (
-                <Link key={c.id} to={`/productos?categoria=${slugify(c.name)}`} className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-700 hover:bg-brand-50">
-                  <CategoryIcon name={c.name} className="size-4 text-brand-500" />
+                <Link key={c.id} to={`/productos?categoria=${slugify(c.name)}`} className="flex min-h-10 min-w-0 items-center gap-2 rounded-md px-2 py-2 text-sm break-words text-ink-700 hover:bg-brand-50">
+                  <CategoryIcon name={c.name} className="size-4 shrink-0 text-brand-500" />
                   {c.name}
                 </Link>
               ))}
@@ -373,7 +399,8 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
           </MobileLink>
         </nav>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

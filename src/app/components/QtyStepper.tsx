@@ -35,7 +35,7 @@ export function QtyStepper({
   const sm = size === 'sm';
   const btn = cn(
     'flex items-center justify-center rounded-full text-ink-700 transition-all hover:bg-white hover:text-brand-500 hover:shadow-sm active:scale-90 disabled:pointer-events-none disabled:opacity-30',
-    sm ? 'size-7' : 'size-10',
+    sm ? 'size-9 sm:size-7' : 'size-10',
   );
   const atMin = value - step < min;
   const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n / step) * step || min));
@@ -94,7 +94,7 @@ function EditableValue({
     else setText(String(value));
   };
   return (
-    <label className={cn('flex items-baseline justify-center gap-0.5 font-semibold text-ink-800 tabular-nums', sm ? 'text-sm' : 'text-base')}>
+    <label className={cn('flex items-baseline justify-center gap-0.5 font-semibold text-ink-800 tabular-nums', sm ? 'text-base sm:text-sm' : 'text-base')}>
       <span className="sr-only">{label}</span>
       <input
         inputMode="numeric"

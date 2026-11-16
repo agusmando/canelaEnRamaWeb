@@ -37,7 +37,7 @@ export default function ResetPassword() {
 
   return (
     <AuthShell>
-      <h1 className="text-4xl font-semibold text-ink-800">Nueva contraseña</h1>
+      <h1 className="text-3xl font-semibold text-ink-800 sm:text-4xl">Nueva contraseña</h1>
       {!token ? (
         <p className="mt-6 text-ink-600">
           El enlace no es válido. <Link to="/recuperar" className="font-medium text-brand-500 underline">Pedí uno nuevo</Link>.

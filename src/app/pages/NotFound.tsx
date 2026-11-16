@@ -11,7 +11,7 @@ export default function NotFound() {
         icon={<Compass className="size-7" />}
         title="No encontramos esta página"
         action={
-          <div className="flex gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             <Link to="/" className="btn-outline h-11 px-5">
               Ir al inicio
             </Link>

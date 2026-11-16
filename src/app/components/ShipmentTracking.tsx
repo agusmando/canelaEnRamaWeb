@@ -38,7 +38,7 @@ export function CopyButton({ value, label = 'Copiar código' }: { value: string;
     }
   };
   return (
-    <button type="button" onClick={copy} aria-label={label} title={label} className="btn-icon size-8 border border-ink-200 bg-white">
+    <button type="button" onClick={copy} aria-label={label} title={label} className="btn-icon size-9 border border-ink-200 bg-white">
       {copied ? <Check className="size-4 text-leaf-600" strokeWidth={3} /> : <Copy className="size-4" />}
     </button>
   );
@@ -93,19 +93,19 @@ export function ShipmentDetails({ data, title = 'Seguimiento del envío', headin
 
   return (
     <section aria-label={title} className="rounded-xl border border-ink-200">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-100 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-100 p-4 sm:p-5">
         <H className="flex items-center gap-2 text-lg font-semibold text-ink-800">
           {isPickup ? <Store className="size-5 text-brand-500" /> : <Truck className="size-5 text-brand-500" />} {title}
         </H>
         <ShipmentStatusBadge status={data.status} className="text-sm" />
       </div>
 
-      <div className="grid gap-6 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="grid gap-6 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <dl className="space-y-4 text-sm">
           <Info label="Método">{SHIPMENT_METHOD[data.method] ?? data.method}</Info>
           <Info label="Código de seguimiento">
-            <span className="inline-flex items-center gap-2">
-              <code className="rounded bg-ink-50 px-2 py-1 font-mono text-[15px] font-semibold tracking-wide text-ink-800">{data.trackingCode}</code>
+            <span className="inline-flex max-w-full items-center gap-2">
+              <code className="min-w-0 rounded bg-ink-50 px-2 py-1 font-mono text-[15px] font-semibold tracking-wide break-all text-ink-800">{data.trackingCode}</code>
               <CopyButton value={data.trackingCode} />
             </span>
           </Info>
@@ -180,7 +180,7 @@ function Info({ label, icon, children }: { label: string; icon?: ReactNode; chil
         {icon}
         {label}
       </dt>
-      <dd className="mt-1 text-ink-800">{children}</dd>
+      <dd className="mt-1 break-words text-ink-800">{children}</dd>
     </div>
   );
 }

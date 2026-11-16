@@ -34,22 +34,22 @@ export function CartDrawer() {
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Carrito">
       <div className="absolute inset-0 bg-ink-900/40 animate-fade-in" onClick={close} />
       <aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl animate-slide-in">
-        <div className="flex items-center justify-between border-b border-ink-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-ink-100 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-5">
           <p className="flex items-center gap-2 font-medium text-ink-800">
             <CheckCircle2 className="size-5 text-leaf-600" /> Agregado al carrito
           </p>
-          <button onClick={close} aria-label="Cerrar" className="btn-icon size-9">
+          <button onClick={close} aria-label="Cerrar" className="btn-icon">
             <X className="size-5" />
           </button>
         </div>
 
-        <ul className="flex-1 divide-y divide-ink-100 overflow-y-auto px-5">
+        <ul className="flex-1 divide-y divide-ink-100 overflow-y-auto overscroll-contain px-4 sm:px-5">
           {cart?.items.map((it) => {
             const v = it.productVariant;
             const img = v.images?.[0]?.secure_url;
             return (
               <li key={`${it.productVariantId}-${it.selectedBulkOption}`} className="flex gap-3 py-4">
-                <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink-50 text-ink-300">
+                <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:size-16 bg-ink-50 text-ink-300">
                   {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-6" />}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -73,7 +73,7 @@ export function CartDrawer() {
           })}
         </ul>
 
-        <div className="space-y-3 border-t border-ink-100 bg-ink-50/60 p-5">
+        <div className="space-y-3 border-t border-ink-100 bg-ink-50/60 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           {(cart?.summary.discount ?? 0) > 0 && (
             <div className="flex items-center justify-between text-sm text-leaf-600">
               <span>Ahorro con ofertas</span>

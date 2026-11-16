@@ -42,7 +42,7 @@ export default function Login() {
 
   return (
     <AuthShell>
-      <h1 className="text-4xl font-semibold text-ink-800 sm:text-[44px]">Acceder</h1>
+      <h1 className="text-3xl font-semibold text-ink-800 sm:text-[44px]">Acceder</h1>
       <p className="mt-6 text-lg text-ink-800">
         ¿Aún no sos miembro?{' '}
         <Link to="/registro" state={{ from: returnTo }} className="inline-flex items-center gap-2 font-semibold hover:text-brand-500">

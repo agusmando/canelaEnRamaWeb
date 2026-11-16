@@ -1,22 +1,43 @@
+import { useEffect, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
-import { ArrowLeft, CalendarClock, Check, CheckCircle2, ImageOff, MessageCircle, RotateCcw, XCircle } from 'lucide-react';
-import { useAddToCartMutation, useCancelOrderMutation, useOrderQuery, useOrderShipmentQuery } from '../api/shopApi';
+import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Clock, ImageOff, MessageCircle, RotateCcw, Wallet, XCircle } from 'lucide-react';
+import {
+  useAddToCartMutation,
+  useCancelOrderMutation,
+  useCreatePaymentPreferenceMutation,
+  useOrderQuery,
+  useOrderShipmentQuery,
+  useSyncPaymentMutation,
+} from '../api/shopApi';
+import type { Order } from '../api/types';
 import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { getErrorMessage } from '../api/client';
 import { ErrorState, PageLoader, Spinner } from '../components/States';
 import { StatusBadge } from './Orders';
 import { ShipmentDetails } from '../components/ShipmentTracking';
-import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, describeQty, itemTotal, orderNumber, paymentLabel } from '../lib/orders';
+import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, PAYMENT_STATUS, canPayOnline, describeQty, itemTotal, orderNumber, paymentLabel } from '../lib/orders';
 import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function OrderDetail() {
   const id = Number(useParams().id);
-  const isNew = useSearchParams()[0].get('nuevo') === '1';
+  const [params] = useSearchParams();
+  const isNew = params.get('nuevo') === '1';
+  /** Vuelta desde Mercado Pago: ?pago=aprobado|pendiente|rechazado */
+  const returnedFromMp = params.get('pago');
   const { data: order, isLoading, error, refetch } = useOrderQuery(id);
+  const [syncPayment, { isLoading: syncing }] = useSyncPaymentMutation();
+  const [createPreference, { isLoading: redirecting }] = useCreatePaymentPreferenceMutation();
+  // Al volver de Mercado Pago, el webhook puede demorar: consultamos el pago una vez
+  const synced = useRef(false);
+  useEffect(() => {
+    if (!returnedFromMp || synced.current || !Number.isFinite(id)) return;
+    synced.current = true;
+    syncPayment(id).unwrap().catch(() => {});
+  }, [returnedFromMp, id, syncPayment]);
   const [cancel, { isLoading: cancelling }] = useCancelOrderMutation();
   const [addToCart, { isLoading: reordering }] = useAddToCartMutation();
   const dispatch = useAppDispatch();
@@ -31,6 +52,18 @@ export default function OrderDetail() {
   const step = ORDER_STEPS.indexOf(order.status);
   const items = order.orderItems ?? [];
   const discount = items.reduce((n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' ? 0 : i.discountAppliedSnapshot || 0), 0);
+
+  const payOnline = async () => {
+    try {
+      const pref = await createPreference(order.id).unwrap();
+      window.location.assign(pref.initPoint);
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+      refetch();
+    }
+  };
+  const isMp = order.paymentType === 'MERCADOPAGO';
+  const paymentLocked = order.paymentStatus === 'APPROVED' || order.paymentStatus === 'IN_PROCESS';
 
   const doCancel = async () => {
     if (!window.confirm('¿Seguro que querés cancelar este pedido?')) return;
@@ -66,8 +99,12 @@ export default function OrderDetail() {
         <ArrowLeft className="size-4" /> Mis pedidos
       </Link>
 
-      {isNew && (
-        <div className="flex gap-4 rounded-xl border border-leaf-500/30 bg-[#f4f9ea] p-5 animate-fade-in">
+      {isMp && (returnedFromMp || canPayOnline(order)) && order.status !== 'CANCELLED' && (
+        <PaymentBanner order={order} syncing={syncing} redirecting={redirecting} onPay={payOnline} />
+      )}
+
+      {isNew && !isMp && (
+        <div className="flex gap-3 rounded-xl border border-leaf-500/30 bg-[#f4f9ea] p-4 animate-fade-in sm:gap-4 sm:p-5">
           <CheckCircle2 className="size-8 shrink-0 text-leaf-600" />
           <div>
             <p className="text-lg font-semibold text-ink-800">¡Gracias por tu compra!</p>
@@ -85,6 +122,11 @@ export default function OrderDetail() {
           </h1>
           <p className="mt-1 text-sm text-ink-500">
             {formatDateTime(order.createdAt)} · {paymentLabel(order.paymentType)}
+            {isMp && order.paymentStatus && (
+              <span className={cn('ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1', PAYMENT_STATUS[order.paymentStatus].className)}>
+                {PAYMENT_STATUS[order.paymentStatus].label}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -101,7 +143,7 @@ export default function OrderDetail() {
           >
             <MessageCircle className="size-4" /> Consultar
           </a>
-          {order.status === 'PENDING' && (
+          {order.status === 'PENDING' && !paymentLocked && (
             <button onClick={doCancel} disabled={cancelling} className="btn-ghost h-10 px-4 text-sm text-brand-600 hover:bg-brand-50 hover:text-brand-700">
               {cancelling ? <Spinner className="size-4" /> : <XCircle className="size-4" />} Cancelar pedido
             </button>
@@ -110,9 +152,9 @@ export default function OrderDetail() {
       </div>
 
       {order.status !== 'CANCELLED' ? (
-        <ol className="grid grid-cols-4 gap-2 rounded-xl border border-ink-200 p-5" aria-label="Estado del pedido">
+        <ol className="grid grid-cols-4 gap-1 rounded-xl border border-ink-200 px-2 py-4 sm:gap-2 sm:p-5" aria-label="Estado del pedido">
           {ORDER_STEPS.map((s, i) => (
-            <li key={s} className="relative flex flex-col items-center text-center">
+            <li key={s} className="relative flex min-w-0 flex-col items-center text-center">
               {i > 0 && <span className={cn('absolute top-4 right-1/2 h-0.5 w-full -translate-y-1/2', i <= step ? 'bg-brand-500' : 'bg-ink-200')} />}
               <span
                 className={cn(
@@ -123,7 +165,7 @@ export default function OrderDetail() {
               >
                 {i < step ? <Check className="size-4" strokeWidth={3} /> : i + 1}
               </span>
-              <span className={cn('mt-2 text-xs sm:text-sm', i <= step ? 'font-medium text-ink-800' : 'text-ink-400')}>{ORDER_STATUS[s].label}</span>
+              <span className={cn('mt-2 max-w-full text-[11px] leading-tight break-words hyphens-auto min-[375px]:text-xs sm:text-sm', i <= step ? 'font-medium text-ink-800' : 'text-ink-400')}>{ORDER_STATUS[s].label}</span>
             </li>
           ))}
         </ol>
@@ -132,8 +174,8 @@ export default function OrderDetail() {
       )}
 
       {order.estimatedReadyAt && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-        <p className="flex items-center gap-2 text-sm text-ink-600">
-          <CalendarClock className="size-4 text-brand-500" /> Fecha estimada en que estará listo: <strong>{formatDate(order.estimatedReadyAt)}</strong>
+        <p className="flex items-start gap-2 text-sm text-ink-600 sm:items-center">
+          <CalendarClock className="mt-0.5 size-4 shrink-0 text-brand-500 sm:mt-0" /> Fecha estimada en que estará listo: <strong>{formatDate(order.estimatedReadyAt)}</strong>
         </p>
       )}
 
@@ -146,17 +188,17 @@ export default function OrderDetail() {
             const closed = it.status === 'CANCELLED' || it.status === 'RETURNED';
             const productId = it.productVariant?.product?.id;
             return (
-              <li key={it.id} className={cn('flex items-center gap-4 p-4', closed && 'opacity-60')}>
-                <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300">
+              <li key={it.id} className={cn('flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4', closed && 'opacity-60')}>
+                <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300 sm:size-16">
                   {img ? <img src={img} alt="" className="size-full object-cover" /> : <ImageOff className="size-6" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   {productId ? (
-                    <Link to={`/producto/${productId}`} className="font-medium text-ink-800 hover:text-brand-500">
+                    <Link to={`/producto/${productId}`} className="font-medium break-words text-ink-800 hover:text-brand-500">
                       {it.productNameSnapshot}
                     </Link>
                   ) : (
-                    <p className="font-medium text-ink-800">{it.productNameSnapshot}</p>
+                    <p className="font-medium break-words text-ink-800">{it.productNameSnapshot}</p>
                   )}
                   <p className="text-sm text-ink-500">
                     {it.variantNameSnapshot} · {describeQty(it.quantity, it.selectedBulkOption, it.productVariant?.contentMeasure)}
@@ -169,7 +211,7 @@ export default function OrderDetail() {
                     </p>
                   )}
                 </div>
-                <span className="flex shrink-0 flex-col items-end">
+                <span className="flex shrink-0 flex-col items-end whitespace-nowrap">
                   {!closed && (it.discountAppliedSnapshot || 0) > 0 && (
                     <span className="text-xs text-ink-400 line-through tabular-nums">{formatCurrency(itemTotal(it) + (it.discountAppliedSnapshot || 0))}</span>
                   )}
@@ -181,7 +223,7 @@ export default function OrderDetail() {
             );
           })}
         </ul>
-        <dl className="space-y-2 border-t border-ink-200 p-5 text-sm">
+        <dl className="space-y-2 border-t border-ink-200 p-4 text-sm sm:p-5">
           {discount > 0 && (
             <div className="flex justify-between text-leaf-600">
               <dt>Descuentos aplicados</dt>
@@ -194,6 +236,70 @@ export default function OrderDetail() {
           </div>
         </dl>
       </section>
+    </div>
+  );
+}
+
+/** Resultado del pago con Mercado Pago y botón para pagar / reintentar. */
+function PaymentBanner({ order, syncing, redirecting, onPay }: { order: Order; syncing: boolean; redirecting: boolean; onPay: () => void }) {
+  const status = order.paymentStatus ?? 'PENDING';
+  const payButton = canPayOnline(order) && (
+    <button onClick={onPay} disabled={redirecting || syncing} className="btn-primary mt-3 h-11 px-5 text-sm">
+      {redirecting ? <Spinner className="size-4" /> : <Wallet className="size-4" />}
+      {status === 'REJECTED' || status === 'CANCELLED' ? 'Reintentar el pago' : 'Pagar con Mercado Pago'}
+    </button>
+  );
+
+  if (syncing && status !== 'APPROVED') {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-ink-200 bg-ink-50 p-4 sm:p-5">
+        <Spinner className="size-5" />
+        <p className="text-ink-700">Estamos confirmando tu pago con Mercado Pago…</p>
+      </div>
+    );
+  }
+  if (status === 'APPROVED') {
+    return (
+      <div className="flex gap-3 rounded-xl border border-leaf-500/30 bg-[#f4f9ea] p-4 animate-fade-in sm:gap-4 sm:p-5">
+        <CheckCircle2 className="size-8 shrink-0 text-leaf-600" />
+        <div>
+          <p className="text-lg font-semibold text-ink-800">¡Pago aprobado, gracias por tu compra!</p>
+          <p className="mt-1 text-ink-600">Ya estamos preparando tu pedido. Te vamos a contactar para coordinar la entrega o el retiro.</p>
+        </div>
+      </div>
+    );
+  }
+  if (status === 'IN_PROCESS') {
+    return (
+      <div className="flex gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 sm:gap-4 sm:p-5">
+        <Clock className="size-8 shrink-0 text-sky-600" />
+        <div>
+          <p className="text-lg font-semibold text-ink-800">Tu pago está en revisión</p>
+          <p className="mt-1 text-ink-600">Mercado Pago lo está verificando. Te avisamos apenas se acredite; no hace falta que pagues de nuevo.</p>
+        </div>
+      </div>
+    );
+  }
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    return (
+      <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:gap-4 sm:p-5">
+        <AlertTriangle className="size-8 shrink-0 text-red-600" />
+        <div>
+          <p className="text-lg font-semibold text-ink-800">{status === 'REJECTED' ? 'El pago fue rechazado' : 'El pago se canceló'}</p>
+          <p className="mt-1 text-ink-600">Tu pedido sigue reservado. Podés intentar de nuevo con otro medio de pago dentro de Mercado Pago.</p>
+          {payButton}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:gap-4 sm:p-5">
+      <Wallet className="size-8 shrink-0 text-amber-600" />
+      <div>
+        <p className="text-lg font-semibold text-ink-800">Tu pedido está reservado: falta el pago</p>
+        <p className="mt-1 text-ink-600">Completá el pago con Mercado Pago para que empecemos a prepararlo. Si no se paga a tiempo, el pedido se cancela automáticamente.</p>
+        {payButton}
+      </div>
     </div>
   );
 }

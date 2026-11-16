@@ -1,4 +1,4 @@
-import type { Measure, OrderItem, OrderItemStatus, OrderStatus, PaymentType } from '../api/types';
+import type { Measure, Order, OrderItem, OrderItemStatus, OrderStatus, PaymentStatus, PaymentType } from '../api/types';
 import { packLabel, stockUnit, toPriceUnits } from './shop';
 import { formatNumber } from './utils';
 
@@ -21,12 +21,26 @@ export const ITEM_STATUS: Record<OrderItemStatus, string> = {
 };
 
 export const PAYMENT_OPTIONS: { value: PaymentType; label: string; hint: string }[] = [
-  { value: 'MERCADOPAGO', label: 'Mercado Pago', hint: 'Te enviamos el link de pago.' },
+  { value: 'MERCADOPAGO', label: 'Mercado Pago', hint: 'Pagás online con tarjeta, dinero en cuenta o cuotas. Te llevamos a Mercado Pago al confirmar.' },
   { value: 'TRANSFER', label: 'Transferencia', hint: 'Te pasamos el CBU/alias al confirmar.' },
   { value: 'CASH', label: 'Efectivo', hint: 'Pagás al retirar o al recibir.' },
   { value: 'DEBIT', label: 'Débito', hint: 'Con tarjeta al retirar o al recibir.' },
   { value: 'CREDIT', label: 'Crédito', hint: 'Con tarjeta al retirar o al recibir.' },
 ];
+
+export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; className: string }> = {
+  PENDING: { label: 'Pago pendiente', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  IN_PROCESS: { label: 'Pago en revisión', className: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  APPROVED: { label: 'Pagado', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  REJECTED: { label: 'Pago rechazado', className: 'bg-red-50 text-red-700 ring-red-200' },
+  CANCELLED: { label: 'Pago cancelado', className: 'bg-ink-50 text-ink-600 ring-ink-200' },
+  REFUNDED: { label: 'Pago devuelto', className: 'bg-ink-50 text-ink-600 ring-ink-200' },
+  CHARGED_BACK: { label: 'Contracargo', className: 'bg-red-50 text-red-700 ring-red-200' },
+};
+
+/** Pedido de Mercado Pago que todavía se puede pagar (o reintentar). */
+export const canPayOnline = (o: Pick<Order, 'paymentType' | 'status' | 'paymentStatus'>) =>
+  o.paymentType === 'MERCADOPAGO' && o.status === 'PENDING' && !['APPROVED', 'IN_PROCESS'].includes(o.paymentStatus ?? 'PENDING');
 
 export const paymentLabel = (p: string) => PAYMENT_OPTIONS.find((o) => o.value === p)?.label ?? p;
 

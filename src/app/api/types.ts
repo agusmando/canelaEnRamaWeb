@@ -156,6 +156,18 @@ export interface CartLineInput {
 export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
 export type OrderItemStatus = 'FULFILLED' | 'AWAITING_STOCK' | 'PARTIALLY_RETURNED' | 'CANCELLED' | 'RETURNED';
 export type PaymentType = 'DEBIT' | 'CREDIT' | 'CASH' | 'TRANSFER' | 'MERCADOPAGO';
+export type PaymentStatus = 'PENDING' | 'IN_PROCESS' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED' | 'CHARGED_BACK';
+
+export interface PaymentConfig {
+  mercadoPago: { enabled: boolean };
+}
+
+export interface PaymentPreference {
+  preferenceId: string;
+  /** URL de Checkout Pro a la que se redirige al cliente. */
+  initPoint: string;
+  sandboxInitPoint: string | null;
+}
 
 export interface OrderItem {
   id: Id;
@@ -185,6 +197,10 @@ export interface Order {
   totalPrice: number;
   totalItems: number;
   paymentType: PaymentType | string;
+  /** Estado del cobro online (Mercado Pago). En otros medios queda PENDING. */
+  paymentStatus?: PaymentStatus;
+  paymentStatusDetail?: string | null;
+  paidAt?: ISODate | null;
   estimatedReadyAt: ISODate | null;
   status: OrderStatus;
   orderItems?: OrderItem[];

@@ -36,13 +36,13 @@ export default function ForgotPassword() {
       <Link to="/login" className="mb-6 inline-flex items-center gap-2 text-ink-600 hover:text-brand-500">
         <ArrowLeft className="size-4" /> Volver
       </Link>
-      <h1 className="text-4xl font-semibold text-ink-800">Recuperar contraseña</h1>
+      <h1 className="text-3xl font-semibold text-ink-800 sm:text-4xl">Recuperar contraseña</h1>
       {sent ? (
-        <div className="mt-8 rounded-xl bg-brand-50 p-6">
+        <div className="mt-8 rounded-xl bg-brand-50 p-5 sm:p-6">
           <MailCheck className="size-8 text-brand-500" />
           <p className="mt-3 text-lg font-medium text-ink-800">Revisá tu correo</p>
           <p className="mt-1 text-ink-600">
-            Si existe una cuenta para <strong>{email}</strong>, te enviamos un enlace para crear una contraseña nueva. Si te registraste con
+            Si existe una cuenta para <strong className="break-all">{email}</strong>, te enviamos un enlace para crear una contraseña nueva. Si te registraste con
             Google, ingresá con el botón de Google.
           </p>
         </div>

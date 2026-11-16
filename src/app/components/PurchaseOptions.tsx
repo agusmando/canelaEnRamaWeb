@@ -40,7 +40,7 @@ export function VariantPicker({
 }) {
   return (
     <fieldset>
-      <legend className="mb-3 flex items-baseline gap-2 text-[15px] font-semibold text-ink-800">
+      <legend className="mb-3 flex flex-wrap items-baseline gap-x-2 text-[15px] font-semibold text-ink-800">
         Variedad <span className="font-normal text-ink-500">· {value.name}</span>
       </legend>
       <div role="radiogroup" aria-label="Variedad" className="flex flex-wrap gap-2">
@@ -56,13 +56,13 @@ export function VariantPicker({
               aria-checked={selected}
               onClick={() => onChange(v)}
               className={cn(
-                'relative flex min-w-[120px] flex-col items-start rounded-xl border px-4 py-2.5 text-left transition-all active:scale-[0.98]',
+                'relative flex max-w-full min-w-[120px] flex-col items-start rounded-xl border px-4 py-2.5 text-left transition-all active:scale-[0.98]',
                 selected
                   ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
                   : 'border-ink-200 bg-white hover:border-ink-400',
               )}
             >
-              <span className={cn('text-[15px] font-medium', selected ? 'text-brand-700' : 'text-ink-800', !available && 'text-ink-400')}>{v.name}</span>
+              <span className={cn('text-[15px] font-medium break-words', selected ? 'text-brand-700' : 'text-ink-800', !available && 'text-ink-400')}>{v.name}</span>
               {available ? (
                 <span className="flex flex-wrap items-baseline gap-x-1.5 text-xs">
                   <span className={cn(deal.discounted ? 'font-semibold text-leaf-600' : 'text-ink-500')}>
@@ -199,7 +199,7 @@ export function WeightPicker({
   const custom = !presets.includes(grams);
   return (
     <fieldset>
-      <legend className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-ink-800">
+      <legend className="mb-3 flex flex-wrap items-center gap-x-2 text-[15px] font-semibold text-ink-800">
         <Scale className="size-4 text-brand-500" /> ¿Cuánto llevás?
         <span className="font-normal text-ink-500">· lo fraccionamos en el momento</span>
       </legend>

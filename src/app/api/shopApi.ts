@@ -9,6 +9,8 @@ import type {
   Category,
   Id,
   Order,
+  PaymentConfig,
+  PaymentPreference,
   Paginated,
   PaymentType,
   Product,
@@ -31,6 +33,9 @@ import type {
  *   GET  /category, /tag, /brand          menús, filtros y footer
  *   POST /cart · GET /cart/me · GET|PUT /cart/:token   carrito de invitado o usuario
  *   POST /order {fromCart}                checkout
+ *   GET  /payment/config                  medios online habilitados
+ *   POST /payment/order/:id/preference    link de pago de Mercado Pago
+ *   POST /payment/order/:id/sync          re-consulta el pago al volver de Mercado Pago
  *   GET  /order/mine · GET|PUT /order/:id mis pedidos / cancelar
  *   GET  /banner/public?placement=        banners administrables (hero, recomendaciones, tiras, anuncio)
  *   GET  /google-review                   puntaje del local y reseñas destacadas de Google
@@ -234,6 +239,20 @@ export const shopApi = createApi({
       invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
     }),
 
+    paymentConfig: build.query<PaymentConfig, void>({
+      query: () => ({ url: '/payment/config' }),
+      keepUnusedDataFor: 900,
+    }),
+
+    createPaymentPreference: build.mutation<PaymentPreference, Id>({
+      query: (orderId) => ({ url: `/payment/order/${orderId}/preference`, method: 'POST' }),
+    }),
+
+    syncPayment: build.mutation<Order, Id>({
+      query: (orderId) => ({ url: `/payment/order/${orderId}/sync`, method: 'POST' }),
+      invalidatesTags: (_r, error) => (error ? [] : ['Order']),
+    }),
+
     myOrders: build.query<Paginated<Order>, { page: number; perPage?: number }>({
       query: ({ page, perPage = 10 }) => ({
         url: '/order/mine',
@@ -371,6 +390,9 @@ export const {
   useAddToCartMutation,
   useUpdateCartMutation,
   useCheckoutMutation,
+  usePaymentConfigQuery,
+  useCreatePaymentPreferenceMutation,
+  useSyncPaymentMutation,
   useMyOrdersQuery,
   useOrderQuery,
   useCancelOrderMutation,

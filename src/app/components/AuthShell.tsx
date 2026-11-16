@@ -105,6 +105,63 @@ function useRotation(count: number, paused: boolean) {
   return count ? index % count : 0;
 }
 
+/** Versión compacta del carrusel para pantallas chicas (debajo del formulario). */
+function MobileReviews({
+  reviews,
+  current,
+  rating,
+  onSelect,
+  onPause,
+}: {
+  reviews: ShellReview[];
+  current: number;
+  rating: { score: number; total: number } | null;
+  onSelect: (i: number) => void;
+  onPause: (paused: boolean) => void;
+}) {
+  const review = reviews[current];
+  return (
+    <aside
+      aria-label="Reseñas de clientes en Google"
+      className="mt-10 border-t border-ink-200 pt-8 lg:hidden"
+      onTouchStart={() => onPause(true)}
+      onFocus={() => onPause(true)}
+      onBlur={() => onPause(false)}
+    >
+      <a href={CONTACT.mapsUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 hover:opacity-80">
+        <GoogleIcon className="size-5" />
+        {rating ? (
+          <span className="text-sm text-ink-600">
+            <span className="font-semibold text-ink-800">{formatRating(rating.score)}</span>{' '}
+            <Stars className="text-sm" value={rating.score} /> · {formatNumber(rating.total)} reseñas
+          </span>
+        ) : (
+          <span className="text-sm font-semibold text-ink-800">Google Reviews</span>
+        )}
+      </a>
+      <ReviewCard
+        key={review.id}
+        review={review}
+        className="mt-4 rounded-2xl border border-ink-100 bg-white p-5 shadow-card animate-fade-in [&_blockquote]:line-clamp-4"
+      />
+      {reviews.length > 1 && (
+        <div className="mt-4 flex justify-center gap-2">
+          {reviews.map((r, i) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => onSelect(i)}
+              aria-label={`Ver reseña ${i + 1} de ${reviews.length}`}
+              aria-current={i === current}
+              className={cn('h-2 rounded-full transition-all', i === current ? 'w-6 bg-brand-500' : 'w-2 bg-ink-300')}
+            />
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
 export function AuthShell({ children }: { children: ReactNode }) {
   const { isLoading, rating, reviews } = useShellReviews();
   const [paused, setPaused] = useState(false);
@@ -118,8 +175,19 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const right = n > 2 ? reviews[(current + 2) % n] : undefined;
   return (
     <div className="container-page py-10 sm:py-14">
-      <div className="grid gap-12 lg:grid-cols-2 lg:gap-0">
-        <div className="lg:border-r lg:border-ink-200 lg:pr-16">{children}</div>
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-0">
+        <div className="min-w-0 lg:border-r lg:border-ink-200 lg:pr-16">
+          {children}
+          {main && (
+            <MobileReviews
+              reviews={reviews}
+              current={current}
+              rating={rating}
+              onSelect={(i) => setOffset(i - index)}
+              onPause={setPaused}
+            />
+          )}
+        </div>
 
         <aside
           aria-label="Reseñas de clientes en Google"

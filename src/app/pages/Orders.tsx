@@ -6,7 +6,7 @@ import type { Order } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { EmptyState, ErrorState } from '../components/States';
 import { ShipmentChip } from '../components/ShipmentTracking';
-import { ORDER_STATUS, orderNumber, paymentLabel } from '../lib/orders';
+import { ORDER_STATUS, PAYMENT_STATUS, canPayOnline, orderNumber, paymentLabel } from '../lib/orders';
 import { cn, formatCurrency, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -24,7 +24,7 @@ export function OrderRow({ order }: { order: Order }) {
   );
   return (
     <li>
-      <Link to={`/mi-cuenta/pedidos/${order.id}`} className="group flex items-center gap-4 rounded-xl border border-ink-200 p-4 transition-colors hover:border-ink-300 hover:bg-ink-50/50">
+      <Link to={`/mi-cuenta/pedidos/${order.id}`} className="group flex items-center gap-3 rounded-xl border border-ink-200 p-3.5 transition-colors sm:gap-4 sm:p-4 hover:border-ink-300 hover:bg-ink-50/50">
         <div className="hidden -space-x-3 sm:flex">
           {thumbs.length ? (
             thumbs.map((t) => <img key={t} src={t} alt="" className="size-12 rounded-full border-2 border-white object-cover" />)
@@ -39,16 +39,21 @@ export function OrderRow({ order }: { order: Order }) {
             <span className="font-semibold text-ink-800">Pedido {orderNumber(order.id)}</span>
             <StatusBadge status={order.status} />
             {order.shipment && <ShipmentChip status={order.shipment.status} />}
+            {order.paymentType === 'MERCADOPAGO' && order.paymentStatus && order.status !== 'CANCELLED' && (canPayOnline(order) || order.paymentStatus === 'IN_PROCESS') && (
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${PAYMENT_STATUS[order.paymentStatus].className}`}>
+                {PAYMENT_STATUS[order.paymentStatus].label}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-sm text-ink-500">
             {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
           </p>
         </div>
-        <span className="flex flex-col items-end">
-          <span className="text-lg font-semibold text-ink-800 tabular-nums">{formatCurrency(order.totalPrice)}</span>
+        <span className="flex shrink-0 flex-col items-end text-right">
+          <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(order.totalPrice)}</span>
           {saved > 0 && <span className="text-xs font-medium text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
         </span>
-        <Chevron className="size-5 text-ink-400 group-hover:text-brand-500" />
+        <Chevron className="size-5 shrink-0 text-ink-400 group-hover:text-brand-500" />
       </Link>
     </li>
   );
