@@ -11,7 +11,7 @@ import {
   useShippingConfigQuery,
   useSyncPaymentMutation,
 } from '../api/shopApi';
-import type { Order } from '../api/types';
+import type { Order, OrderItem } from '../api/types';
 import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
 import { getErrorMessage } from '../api/client';
@@ -24,6 +24,10 @@ import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cld } from '../lib/cloudinary';
+
+/** La variante sigue a la venta en la web (si el API no manda el dato, se asume que sí). */
+const isSellable = (v: OrderItem['productVariant']) =>
+  !!v && v.active !== false && v.availableWeb !== false && v.product?.active !== false;
 
 export default function OrderDetail() {
   const id = Number(useParams().id);
@@ -84,9 +88,11 @@ export default function OrderDetail() {
     }
   };
 
-  // "Volver a comprar": mismas variantes, presentaciones y cantidades.
-  const reorderLines = items
-    .filter((i) => i.productVariantId && i.status !== 'CANCELLED' && i.status !== 'RETURNED' && i.quantity > 0)
+  // "Volver a comprar": mismas variantes, presentaciones y cantidades, salvo
+  // las que ya no se venden en la web (el API las rechazaría).
+  const boughtLines = items.filter((i) => i.productVariantId && i.status !== 'CANCELLED' && i.status !== 'RETURNED' && i.quantity > 0);
+  const reorderLines = boughtLines
+    .filter((i) => isSellable(i.productVariant))
     .map((i) => ({
       productVariantId: i.productVariantId!,
       quantity: i.quantity,
@@ -95,7 +101,12 @@ export default function OrderDetail() {
   const reorder = async () => {
     try {
       await addToCart(reorderLines).unwrap();
-      toast.success('Agregamos los productos a tu carrito');
+      const skipped = boughtLines.length - reorderLines.length;
+      toast.success(
+        skipped
+          ? `Agregamos los productos a tu carrito (${skipped === 1 ? '1 ya no está disponible' : `${skipped} ya no están disponibles`})`
+          : 'Agregamos los productos a tu carrito',
+      );
       dispatch(setDrawerOpen(true));
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -237,7 +248,7 @@ export default function OrderDetail() {
           {items.map((it) => {
             const img = it.productVariant?.images?.[0]?.secure_url;
             const closed = it.status === 'CANCELLED' || it.status === 'RETURNED';
-            const productId = it.productVariant?.product?.id;
+            const productId = it.productVariant?.product?.active === false ? undefined : it.productVariant?.product?.id;
             return (
               <li key={it.id} className={cn('flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4', closed && 'opacity-60')}>
                 <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300 sm:size-16">

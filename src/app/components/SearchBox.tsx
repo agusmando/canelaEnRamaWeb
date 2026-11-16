@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
 import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
-import { cardPrice, normalize, productImages, slugify } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, productImages, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 import { cld } from '../lib/cloudinary';
 
@@ -87,7 +87,9 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
     if (term.length < 2 || !catalog) return [];
     return catalog
       .filter((p) =>
-        normalize(`${p.name} ${p.Category?.name ?? ''} ${p.Brand?.name ?? ''} ${(p.Tags ?? []).map((t) => t.name).join(' ')}`).includes(term),
+        normalize(
+          `${p.name} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
+        ).includes(term),
       )
       .slice(0, 6);
   }, [q, catalog]);
@@ -246,7 +248,7 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
                             <Highlight text={p.name} term={term} />
                           </span>
                           <span className="block truncate text-xs text-ink-500">
-                            {[p.Category?.name, p.Brand?.name].filter(Boolean).join(' · ')}
+                            {[p.Category?.name, localKind(p) === 'all' ? LOCAL_LABEL : p.Brand?.name].filter(Boolean).join(' · ')}
                           </span>
                         </span>
                         {info && (

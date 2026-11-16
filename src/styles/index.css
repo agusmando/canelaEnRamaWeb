@@ -23,6 +23,12 @@
   --color-leaf-500: #95cc31;
   --color-leaf-600: #7fb126;
 
+  /* "Productor local": verde oscuro, legible como texto sobre blanco */
+  --color-local-50: #f1f8e6;
+  --color-local-200: #cfe5ad;
+  --color-local-600: #4f7a17;
+  --color-local-700: #3f6212;
+
   --color-ink-50: #f6f6f6;
   --color-ink-100: #eeeeee;
   --color-ink-200: #dddddd;

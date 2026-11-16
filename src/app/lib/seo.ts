@@ -1,6 +1,6 @@
 import type { Product } from '../api/types';
 import { cld } from './cloudinary';
-import { cardPrice, productImages } from './shop';
+import { cardPrice, localKind, productImages } from './shop';
 
 /**
  * Datos SEO compartidos entre la SPA (`useSeo`) y las Cloudflare Pages Functions
@@ -55,9 +55,12 @@ export function productSeo(product: Product, origin = SITE_URL): ProductSeo {
   const info = cardPrice(product);
   const price = info ? Math.round(info.price * 100) / 100 : null;
   const inStock = !!info?.hasStock;
+  // 100 % de productores locales: no tiene marca comercial (la "marca" cargada es la de la casa)
+  const local = localKind(product) === 'all';
+  const brand = local ? null : product.Brand?.name;
   const description = truncate(
     product.description?.trim() ||
-      `Comprá ${product.name}${product.Brand?.name ? ` de ${product.Brand.name}` : ''} en Canela en Rama, almacén natural en Godoy Cruz, Mendoza. Envíos en el Gran Mendoza.`,
+      `Comprá ${product.name}${local ? ' de productores locales' : brand ? ` de ${brand}` : ''} en Canela en Rama, almacén natural en Godoy Cruz, Mendoza. Envíos en el Gran Mendoza.`,
   );
 
   const jsonLd: Record<string, unknown> = {
@@ -68,7 +71,7 @@ export function productSeo(product: Product, origin = SITE_URL): ProductSeo {
     sku: String(product.id),
     url,
     ...(images.length ? { image: images.slice(0, 3).map((i) => cld(i, { w: 1200 })) } : {}),
-    ...(product.Brand?.name ? { brand: { '@type': 'Brand', name: product.Brand.name } } : {}),
+    ...(brand ? { brand: { '@type': 'Brand', name: brand } } : {}),
     ...(product.Category?.name ? { category: product.Category.name } : {}),
     ...(price !== null
       ? {

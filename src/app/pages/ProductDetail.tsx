@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
-import { BadgePercent, Check, Clock, ImageOff, PackageCheck, PackageX, Share2, ShoppingCart, Store, Tag as TagIcon, Truck } from 'lucide-react';
+import { BadgePercent, Check, Clock, ImageOff, PackageCheck, PackageX, Share2, ShoppingCart, Sprout, Store, Tag as TagIcon, Truck } from 'lucide-react';
 import { useAddToCartMutation, useCatalogQuery, useProductQuery } from '../api/shopApi';
 import type { Product, ProductVariant } from '../api/types';
 import { getErrorMessage } from '../api/client';
@@ -22,6 +22,8 @@ import { whatsappLink } from '../lib/contact';
 import {
   cardPrice,
   inStock,
+  isLocalVariant,
+  LOCAL_LABEL,
   offerDescription,
   packLabel,
   packOptions,
@@ -163,7 +165,14 @@ function ProductView({ product }: { product: Product }) {
           <div className="min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                {product.Brand?.name && (
+                {(variant ? isLocalVariant(variant, product) : product.isLocal) ? (
+                  <Link
+                    to="/productos?local=1"
+                    className="inline-flex items-center gap-1 text-xs font-semibold tracking-wider text-local-600 uppercase hover:underline"
+                  >
+                    <Sprout className="size-3.5" aria-hidden /> {LOCAL_LABEL}
+                  </Link>
+                ) : product.Brand?.name && (
                   <Link
                     to={`/productos?marca=${slugify(product.Brand.name)}`}
                     className="text-xs font-semibold tracking-wider text-brand-500 uppercase hover:underline"
@@ -204,6 +213,12 @@ function ProductView({ product }: { product: Product }) {
                     <BadgePercent className="size-4" /> {offerDescription(offer, variant.contentMeasure)}
                   </span>
                 )}
+              </p>
+            )}
+
+            {variant && isLocalVariant(variant, product) && (
+              <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-local-50 px-3 py-1 text-sm text-local-700 ring-1 ring-local-200 ring-inset">
+                <Sprout className="size-4 shrink-0" aria-hidden /> De productores locales de Mendoza
               </p>
             )}
 

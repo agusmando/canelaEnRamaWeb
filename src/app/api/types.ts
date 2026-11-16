@@ -101,6 +101,10 @@ export interface ProductVariant {
   requestTime: string;
   stockThreshold: number;
   availableWeb: boolean;
+  /** Productor local solo para esta variante (null = igual que el producto). */
+  isLocal?: boolean | null;
+  /** Productor local ya resuelto por el API (variante o, si no lo define, producto). */
+  local?: boolean;
   offers?: Offer[];
   images?: Image[];
   hasComponents?: unknown[];
@@ -115,6 +119,8 @@ export interface Product {
   measure: Measure;
   categoryId: Id;
   brandId: Id;
+  /** De productores locales (sin marca comercial): se muestra en lugar de la marca. */
+  isLocal?: boolean;
   Category?: Category;
   Brand?: Brand;
   Tags?: Tag[];
@@ -193,7 +199,9 @@ export interface OrderItem {
     name: string;
     contentMeasure: Measure;
     images?: Image[];
-    product?: { id: Id; name: string };
+    active?: boolean;
+    availableWeb?: boolean;
+    product?: { id: Id; name: string; active?: boolean };
   } | null;
 }
 

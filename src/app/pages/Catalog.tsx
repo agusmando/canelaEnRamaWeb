@@ -8,7 +8,7 @@ import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
-import { cardPrice, normalize, selectOffer, slugify, webVariants } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, selectOffer, slugify, webVariants } from '../lib/shop';
 import { cn, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -40,6 +40,7 @@ export default function Catalog() {
   const selTags = list(params.get('etiqueta'));
   const selBrands = list(params.get('marca'));
   const onlyOffers = params.get('ofertas') === '1';
+  const onlyLocal = params.get('local') === '1';
   const sort = params.get('orden') ?? 'relevancia';
   const min = params.get('min') ? Number(params.get('min')) : null;
   const max = params.get('max') ? Number(params.get('max')) : null;
@@ -77,12 +78,16 @@ export default function Catalog() {
       if (selCats.length && !selCats.includes(slugify(p.Category?.name ?? ''))) return false;
       const ptags = (p.Tags ?? []).map((t) => slugify(t.name));
       if (selTags.length && !selTags.every((t) => ptags.includes(t))) return false;
-      if (selBrands.length && !selBrands.includes(slugify(p.Brand?.name ?? ''))) return false;
+      // Los productos 100 % locales se muestran como "Productor local", no por su marca
+      if (selBrands.length && (localKind(p) === 'all' || !selBrands.includes(slugify(p.Brand?.name ?? '')))) return false;
+      if (onlyLocal && !localKind(p)) return false;
       if (min !== null && info.price < min) return false;
       if (max !== null && info.price > max) return false;
       if (onlyOffers && !webVariants(p).some((v) => selectOffer(v, p))) return false;
       if (term) {
-        const hay = normalize(`${p.name} ${p.description ?? ''} ${p.Category?.name ?? ''} ${p.Brand?.name ?? ''} ${(p.Tags ?? []).map((t) => t.name).join(' ')}`);
+        const hay = normalize(
+          `${p.name} ${p.description ?? ''} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
+        );
         if (!term.split(/\s+/).every((w) => hay.includes(w))) return false;
       }
       return true;
@@ -107,16 +112,19 @@ export default function Catalog() {
   }, [items, q, params]);
 
   // Conteos por categoría / marca sobre lo vendible.
-  const [catCount, brandCount] = useMemo(() => {
+  const [catCount, brandCount, localCount] = useMemo(() => {
     const cats = new Map<string, number>();
     const brs = new Map<string, number>();
+    let locals = 0;
     for (const { p } of items) {
       const c = slugify(p.Category?.name ?? '');
       cats.set(c, (cats.get(c) ?? 0) + 1);
+      const kind = localKind(p);
+      if (kind) locals++;
       const b = slugify(p.Brand?.name ?? '');
-      if (b) brs.set(b, (brs.get(b) ?? 0) + 1);
+      if (b && kind !== 'all') brs.set(b, (brs.get(b) ?? 0) + 1);
     }
-    return [cats, brs];
+    return [cats, brs, locals] as const;
   }, [items]);
 
   useEffect(() => {
@@ -135,7 +143,9 @@ export default function Catalog() {
         ? brandName(selBrands[0])
         : onlyOffers
           ? 'Ofertas'
-          : 'Todos los productos';
+          : onlyLocal
+            ? 'Productores locales'
+            : 'Todos los productos';
   useDocumentTitle(title, {
     description:
       title === 'Todos los productos'
@@ -148,6 +158,7 @@ export default function Catalog() {
   const chips: { label: string; remove: () => void }[] = [
     ...(q ? [{ label: `“${q}”`, remove: () => update({ q: null }) }] : []),
     ...(onlyOffers ? [{ label: 'En oferta', remove: () => update({ ofertas: null }) }] : []),
+    ...(onlyLocal ? [{ label: LOCAL_LABEL, remove: () => update({ local: null }) }] : []),
     ...selCats.map((s) => ({ label: catName(s), remove: () => toggle('categoria', s) })),
     ...selTags.map((s) => ({ label: tagName(s), remove: () => toggle('etiqueta', s) })),
     ...selBrands.map((s) => ({ label: brandName(s), remove: () => toggle('marca', s) })),
@@ -174,6 +185,9 @@ export default function Catalog() {
       onPrice={(lo, hi) => update({ min: lo > 0 ? String(lo) : null, max: hi < priceCeil ? String(hi) : null })}
       onlyOffers={onlyOffers}
       onOffers={(v) => update({ ofertas: v ? '1' : null })}
+      onlyLocal={onlyLocal}
+      localCount={localCount}
+      onLocal={(v) => update({ local: v ? '1' : null })}
     />
   );
 
@@ -310,6 +324,9 @@ interface FiltersProps {
   onPrice: (lo: number, hi: number) => void;
   onlyOffers: boolean;
   onOffers: (v: boolean) => void;
+  onlyLocal: boolean;
+  localCount: number;
+  onLocal: (v: boolean) => void;
 }
 
 function Filters(p: FiltersProps) {
@@ -320,6 +337,11 @@ function Filters(p: FiltersProps) {
           <li>
             <FilterRow checked={p.onlyOffers} onChange={() => p.onOffers(!p.onlyOffers)} label="En oferta" />
           </li>
+          {(p.localCount > 0 || p.onlyLocal) && (
+            <li>
+              <FilterRow checked={p.onlyLocal} onChange={() => p.onLocal(!p.onlyLocal)} label={LOCAL_LABEL} count={p.localCount} />
+            </li>
+          )}
           {p.tags.map((t) => (
             <li key={t.slug}>
               <FilterRow checked={p.selTags.includes(t.slug)} onChange={() => p.onToggle('etiqueta', t.slug)} label={t.name} />

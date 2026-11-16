@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
-import { Check, ChevronRight, ImageOff, ShoppingCart } from 'lucide-react';
+import { Check, ChevronRight, ImageOff, ShoppingCart, Sprout } from 'lucide-react';
 import type { Product } from '../api/types';
 import { useAddToCartMutation } from '../api/shopApi';
 import { getErrorMessage } from '../api/client';
 import { useAppDispatch } from '../store';
 import { setDrawerOpen } from '../store/cartSlice';
-import { cardPrice, hasOffer, productImages, quickAddLine } from '../lib/shop';
+import { cardPrice, hasOffer, LOCAL_LABEL, localKind, productImages, quickAddLine } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 import { cldImg } from '../lib/cloudinary';
 import { FavoriteButton } from './FavoriteButton';
@@ -20,6 +20,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
   const discounted = info && info.list - info.price > 0.009;
   // La oferta puede estar en otra variedad que no es la que muestra la tarjeta
   const badge = info?.badge ?? (hasOffer(product) ? 'Oferta' : null);
+  const local = localKind(product);
 
   return (
     <article
@@ -69,7 +70,18 @@ export function ProductCard({ product, className }: { product: Product; classNam
       />
 
       <div className="flex flex-1 flex-col px-1 pt-3">
-        {product.Brand?.name && <p className="truncate text-[11px] font-medium tracking-wider text-ink-400 uppercase">{product.Brand.name}</p>}
+        {local === 'all' ? (
+          <p className="flex items-center gap-1 truncate text-[11px] font-semibold tracking-wider text-local-600 uppercase">
+            <Sprout className="size-3.5 shrink-0" aria-hidden /> {LOCAL_LABEL}
+          </p>
+        ) : (
+          (product.Brand?.name || local) && (
+            <p className="truncate text-[11px] font-medium tracking-wider text-ink-400 uppercase">
+              {product.Brand?.name}
+              {local === 'some' && <span className="text-local-600">{product.Brand?.name ? ' · ' : ''}Opción local</span>}
+            </p>
+          )
+        )}
         <h3 className="line-clamp-2 min-h-[2.6em] text-[15px] leading-snug text-ink-800">
           <Link to={to} className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none">
             {product.name}

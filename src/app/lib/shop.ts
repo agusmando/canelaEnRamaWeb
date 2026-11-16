@@ -17,6 +17,25 @@ export function webVariants(p: Product): ProductVariant[] {
 
 export const inStock = (v: ProductVariant) => Number(v.currentStock) > 0;
 
+/** Variante de productor local: lo que diga ella o, si no lo define, su producto. */
+export const isLocalVariant = (v: ProductVariant | undefined, p: Product) => !!(v?.local ?? v?.isLocal ?? p.isLocal);
+
+/**
+ * 'all': todo lo que se vende en la web es de productores locales (se muestra
+ * "Productor local" en vez de la marca); 'some': solo algunas variedades; null: ninguna.
+ */
+export function localKind(p: Product): 'all' | 'some' | null {
+  const vs = webVariants(p);
+  const n = vs.filter((v) => isLocalVariant(v, p)).length;
+  if (!n) return null;
+  return n === vs.length ? 'all' : 'some';
+}
+
+export const LOCAL_LABEL = 'Productor local';
+
+/** Texto extra para el buscador: "productor local" encuentra estos productos. */
+export const localSearchText = (p: Product) => (localKind(p) ? ' productor local productores locales mendoza' : '');
+
 export function productImages(p: Product, preferred?: ProductVariant): string[] {
   const ordered = preferred ? [preferred, ...(p.variants ?? []).filter((v) => v.id !== preferred.id)] : p.variants ?? [];
   const urls = ordered.flatMap((v) => (v.images ?? []).map((i) => i.secure_url));
