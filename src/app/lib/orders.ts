@@ -34,8 +34,7 @@ export const ITEM_STATUS: Record<OrderItemStatus, string> = {
 
 export const PAYMENT_OPTIONS: { value: PaymentType; label: string; hint: string }[] = [
   { value: 'MERCADOPAGO', label: 'Mercado Pago', hint: 'Pagás online con tarjeta de débito o crédito, dinero en cuenta o cuotas. Te llevamos a Mercado Pago al confirmar.' },
-  { value: 'TRANSFER', label: 'Transferencia', hint: 'Te pasamos el CBU/alias al confirmar.' },
-  { value: 'CASH', label: 'Efectivo', hint: 'Pagás al retirar o al recibir.' },
+  { value: 'CASH', label: 'Efectivo / Transferencia', hint: 'Pagás al retirar en el local, en efectivo o por transferencia.' },
 ];
 
 export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; className: string }> = {
@@ -53,7 +52,7 @@ export const canPayOnline = (o: Pick<Order, 'paymentType' | 'status' | 'paymentS
   o.paymentType === 'MERCADOPAGO' && o.status === 'PENDING' && !['APPROVED', 'IN_PROCESS'].includes(o.paymentStatus ?? 'PENDING');
 
 // Pedidos viejos pueden tener DEBIT/CREDIT: ya no se ofrecen, pero se siguen mostrando.
-const LEGACY_PAYMENT_LABEL: Record<string, string> = { DEBIT: 'Débito', CREDIT: 'Crédito' };
+const LEGACY_PAYMENT_LABEL: Record<string, string> = { DEBIT: 'Débito', CREDIT: 'Crédito', TRANSFER: 'Transferencia' };
 export const paymentLabel = (p: string) => PAYMENT_OPTIONS.find((o) => o.value === p)?.label ?? LEGACY_PAYMENT_LABEL[p] ?? p;
 
 /** "2 × 500g" o "300 g". */

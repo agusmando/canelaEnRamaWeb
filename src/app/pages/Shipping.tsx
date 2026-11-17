@@ -69,7 +69,7 @@ export default function Shipping() {
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">
             <CreditCard className="size-5 text-brand-500" /> Medios de pago
           </h2>
-          <p className="mt-3 text-ink-700">Mercado Pago, transferencia bancaria, efectivo, débito o crédito.</p>
+          <p className="mt-3 text-ink-700">Mercado Pago (tarjeta de débito o crédito, dinero en cuenta o cuotas). Si retirás en el local, también podés pagar en efectivo o por transferencia al retirar.</p>
         </section>
       </div>
 

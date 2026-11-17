@@ -64,9 +64,6 @@ export default function Cart() {
   const { data: paymentConfig } = usePaymentConfigQuery();
   const mpEnabled = paymentConfig?.mercadoPago.enabled ?? false;
   const [chosen, setPayment] = useState<PaymentType>('MERCADOPAGO');
-  // Si Mercado Pago no está configurado en el backend, no se ofrece
-  const options = PAYMENT_OPTIONS.filter((o) => o.value !== 'MERCADOPAGO' || mpEnabled);
-  const payment = options.some((o) => o.value === chosen) ? chosen : (options[0]?.value ?? 'TRANSFER');
   const navigate = useNavigate();
   // Líneas con un cambio de cantidad sin confirmar: el resumen se marca como desactualizado.
   const [busyLines, setBusyLines] = useState<Record<string, boolean>>({});
@@ -83,6 +80,9 @@ export default function Cart() {
     storeMethod(m);
   };
   const delivery = shippingMethod === 'DELIVERY';
+  // Mercado Pago solo si está configurado; Efectivo / Transferencia solo para retiro en el local
+  const options = PAYMENT_OPTIONS.filter((o) => (o.value === 'MERCADOPAGO' ? mpEnabled : !delivery));
+  const payment: PaymentType | null = options.some((o) => o.value === chosen) ? chosen : (options[0]?.value ?? null);
   const [addressOpen, setAddressOpen] = useState(false);
   const closeAddress = useCallback(() => setAddressOpen(false), []);
   const { data: shippingConfig } = useShippingConfigQuery();
@@ -111,6 +111,7 @@ export default function Cart() {
 
   const finish = async () => {
     try {
+      if (!payment) return;
       const order = await checkout({ paymentType: payment, shippingMethod }).unwrap();
       if (payment === 'MERCADOPAGO') {
         try {
@@ -241,7 +242,16 @@ export default function Cart() {
                   );
                 })}
               </div>
-              <p className="mt-3 text-xs text-ink-500">{PAYMENT_OPTIONS.find((o) => o.value === payment)?.hint}</p>
+              {!options.length ? (
+                <p className="mt-3 text-sm text-amber-700">
+                  Los envíos a domicilio se pagan con Mercado Pago, que no está disponible en este momento. Elegí retiro en el local para pagar en efectivo o por transferencia.
+                </p>
+              ) : (
+                <p className="mt-3 text-xs text-ink-500">
+                  {PAYMENT_OPTIONS.find((o) => o.value === payment)?.hint}
+                  {delivery && ' Los envíos a domicilio se pagan con Mercado Pago.'}
+                </p>
+              )}
             </div>
 
             <div className="rounded-xl border border-ink-200 p-4 min-[375px]:p-5 sm:p-8">
@@ -276,7 +286,7 @@ export default function Cart() {
               </p>
 
               {authStatus === 'authenticated' ? (
-                <button onClick={finish} disabled={placing || redirecting || isFetching || syncing || !deliveryReady} className="btn-primary mt-6 h-13 w-full rounded-xl text-base sm:text-[17px]">
+                <button onClick={finish} disabled={placing || redirecting || isFetching || syncing || !deliveryReady || !payment} className="btn-primary mt-6 h-13 w-full rounded-xl text-base sm:text-[17px]">
                   {placing || redirecting ? <Spinner /> : <ShieldCheck className="size-5" />}
                   {redirecting ? 'Abriendo Mercado Pago…' : payment === 'MERCADOPAGO' ? 'Pagar con Mercado Pago' : 'Finalizar compra'}
                   <ArrowRight className="size-4" />

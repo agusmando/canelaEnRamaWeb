@@ -460,7 +460,7 @@ const BENEFITS = [
   { icon: Truck, title: 'Envíos en Mendoza', text: 'Llevamos tu pedido a domicilio en el Gran Mendoza.' },
   { icon: Store, title: 'Retiro en el local', text: 'Colombia 1268, Godoy Cruz. Sin costo.' },
   { icon: Leaf, title: 'Calidad natural', text: 'Productos frescos, fraccionados en el día.' },
-  { icon: CreditCard, title: 'Pagá como quieras', text: 'Mercado Pago, transferencia, efectivo o tarjeta.' },
+  { icon: CreditCard, title: 'Pagá como quieras', text: 'Mercado Pago con tarjeta o cuotas; efectivo o transferencia al retirar.' },
 ];
 
 function Benefits() {
