@@ -179,7 +179,6 @@ export interface PaymentPreference {
   preferenceId: string;
   /** URL de Checkout Pro a la que se redirige al cliente. */
   initPoint: string;
-  sandboxInitPoint: string | null;
 }
 
 export interface OrderItem {
