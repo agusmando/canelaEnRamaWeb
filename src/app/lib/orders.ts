@@ -10,6 +10,18 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; className: strin
   CANCELLED: { label: 'Cancelado', className: 'bg-ink-50 text-ink-600 ring-ink-200', hint: 'El pedido fue cancelado y el stock repuesto.' },
 };
 
+/** En retiro por el local, "despachado" significa listo para retirar. */
+const PICKUP_STATUS: Partial<typeof ORDER_STATUS> = {
+  SHIPPED: { label: 'Listo para retirar', className: 'bg-violet-50 text-violet-700 ring-violet-200', hint: 'Ya podés pasar a retirarlo por el local.' },
+  DELIVERED: { label: 'Retirado', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200', hint: '¡Que lo disfrutes!' },
+};
+
+/** Etiqueta del estado según cómo se entrega el pedido (pedidos viejos: retiro). */
+export const orderStatusInfo = (status: OrderStatus, method?: string | null) =>
+  ((method ?? 'PICKUP') === 'PICKUP' && PICKUP_STATUS[status]) || ORDER_STATUS[status];
+
+export const orderMethod = (o: Pick<Order, 'shippingMethod' | 'shipment'>) => o.shippingMethod ?? o.shipment?.method ?? 'PICKUP';
+
 export const ORDER_STEPS: OrderStatus[] = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
 
 export const ITEM_STATUS: Record<OrderItemStatus, string> = {

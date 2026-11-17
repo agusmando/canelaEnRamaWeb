@@ -6,14 +6,14 @@ import type { Order } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { EmptyState, ErrorState } from '../components/States';
 import { ShipmentChip } from '../components/ShipmentTracking';
-import { ORDER_STATUS, PAYMENT_STATUS, canPayOnline, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
+import { PAYMENT_STATUS, orderMethod, orderStatusInfo, canPayOnline, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
 import { SHIPMENT_METHOD } from '../lib/shipments';
 import { cn, formatCurrency, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cld } from '../lib/cloudinary';
 
-export function StatusBadge({ status }: { status: Order['status'] }) {
-  const s = ORDER_STATUS[status] ?? { label: status, className: 'bg-ink-50 text-ink-600 ring-ink-200' };
+export function StatusBadge({ status, method }: { status: Order['status']; method?: string | null }) {
+  const s = orderStatusInfo(status, method) ?? { label: status, className: 'bg-ink-50 text-ink-600 ring-ink-200' };
   return <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', s.className)}>{s.label}</span>;
 }
 
@@ -39,7 +39,7 @@ export function OrderRow({ order }: { order: Order }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink-800">Pedido {orderNumber(order.id)}</span>
-            <StatusBadge status={order.status} />
+            <StatusBadge status={order.status} method={orderMethod(order)} />
             {order.shipment && <ShipmentChip status={order.shipment.status} />}
             {order.paymentType === 'MERCADOPAGO' && order.paymentStatus && order.status !== 'CANCELLED' && (canPayOnline(order) || order.paymentStatus === 'IN_PROCESS') && (
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${PAYMENT_STATUS[order.paymentStatus].className}`}>

@@ -18,7 +18,7 @@ import { getErrorMessage } from '../api/client';
 import { ErrorState, PageLoader, Spinner } from '../components/States';
 import { StatusBadge } from './Orders';
 import { ShipmentDetails } from '../components/ShipmentTracking';
-import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, PAYMENT_STATUS, canPayOnline, describeQty, itemTotal, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
+import { ITEM_STATUS, ORDER_STATUS, ORDER_STEPS, orderStatusInfo, PAYMENT_STATUS, canPayOnline, describeQty, itemTotal, orderNumber, orderTotal, paymentLabel } from '../lib/orders';
 import { SHIPMENT_METHOD } from '../lib/shipments';
 import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
@@ -138,7 +138,7 @@ export default function OrderDetail() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold text-ink-800">
-            Pedido {orderNumber(order.id)} <StatusBadge status={order.status} />
+            Pedido {orderNumber(order.id)} <StatusBadge status={order.status} method={method} />
           </h1>
           <p className="mt-1 text-sm text-ink-500">
             {formatDateTime(order.createdAt)} · {paymentLabel(order.paymentType)} · {SHIPMENT_METHOD[method] ?? method}
@@ -185,7 +185,7 @@ export default function OrderDetail() {
               >
                 {i < step ? <Check className="size-4" strokeWidth={3} /> : i + 1}
               </span>
-              <span className={cn('mt-2 max-w-full text-[11px] leading-tight break-words hyphens-auto min-[375px]:text-xs sm:text-sm', i <= step ? 'font-medium text-ink-800' : 'text-ink-400')}>{ORDER_STATUS[s].label}</span>
+              <span className={cn('mt-2 max-w-full text-[11px] leading-tight break-words hyphens-auto min-[375px]:text-xs sm:text-sm', i <= step ? 'font-medium text-ink-800' : 'text-ink-400')}>{orderStatusInfo(s, method).label}</span>
             </li>
           ))}
         </ol>
