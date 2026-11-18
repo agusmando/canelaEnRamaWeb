@@ -17,7 +17,7 @@ export function ShipmentStatusBadge({ status, className }: { status: ShipmentSta
 export function ShipmentChip({ status }: { status: ShipmentStatus }) {
   const s = SHIPMENT_STATUS[status];
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5 text-xs text-ink-600 ring-1 ring-ink-200 ring-inset">
+    <span className="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5 text-xs whitespace-nowrap text-ink-600 ring-1 ring-ink-200 ring-inset">
       <Truck className="size-3" aria-hidden />
       <span className="sr-only">Envío: </span>
       {s?.label ?? status}

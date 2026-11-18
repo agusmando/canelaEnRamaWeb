@@ -254,33 +254,35 @@ export default function OrderDetail() {
                 <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-100 text-ink-300 sm:size-16">
                   {img ? <img src={cld(img, { w: 160, h: 160 })} alt="" loading="lazy" decoding="async" className="size-full object-cover" /> : <ImageOff className="size-6" />}
                 </span>
-                <div className="min-w-0 flex-1">
-                  {productId ? (
-                    <Link to={`/producto/${productId}`} className="font-medium break-words text-ink-800 hover:text-brand-500">
-                      {it.productNameSnapshot}
-                    </Link>
-                  ) : (
-                    <p className="font-medium break-words text-ink-800">{it.productNameSnapshot}</p>
-                  )}
-                  <p className="text-sm text-ink-500">
-                    {it.variantNameSnapshot} · {describeQty(it.quantity, it.selectedBulkOption, it.productVariant?.contentMeasure)}
-                  </p>
-                  {ITEM_STATUS[it.status] && <p className="mt-0.5 text-xs font-medium text-amber-700">{ITEM_STATUS[it.status]}</p>}
-                  {it.offerTypeSnapshot && !closed && (
-                    <p className="mt-0.5 text-xs font-medium text-leaf-600">
-                      Oferta {it.offerTypeSnapshot}
-                      {(it.discountAppliedSnapshot || 0) > 0 && ` · ahorraste ${formatCurrency(it.discountAppliedSnapshot)}`}
+                <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    {productId ? (
+                      <Link to={`/producto/${productId}`} className="font-medium break-words text-ink-800 hover:text-brand-500">
+                        {it.productNameSnapshot}
+                      </Link>
+                    ) : (
+                      <p className="font-medium break-words text-ink-800">{it.productNameSnapshot}</p>
+                    )}
+                    <p className="text-sm text-ink-500">
+                      {it.variantNameSnapshot} · {describeQty(it.quantity, it.selectedBulkOption, it.productVariant?.contentMeasure)}
                     </p>
-                  )}
-                </div>
-                <span className="flex shrink-0 flex-col items-end whitespace-nowrap">
-                  {!closed && (it.discountAppliedSnapshot || 0) > 0 && (
-                    <span className="text-xs text-ink-400 line-through tabular-nums">{formatCurrency(itemTotal(it) + (it.discountAppliedSnapshot || 0))}</span>
-                  )}
-                  <span className={cn('font-semibold tabular-nums', closed ? 'text-ink-800 line-through' : (it.discountAppliedSnapshot || 0) > 0 ? 'text-leaf-600' : 'text-ink-800')}>
-                    {formatCurrency(itemTotal(it))}
+                    {ITEM_STATUS[it.status] && <p className="mt-0.5 text-xs font-medium text-amber-700">{ITEM_STATUS[it.status]}</p>}
+                    {it.offerTypeSnapshot && !closed && (
+                      <p className="mt-0.5 text-xs font-medium text-leaf-600">
+                        Oferta {it.offerTypeSnapshot}
+                        {(it.discountAppliedSnapshot || 0) > 0 && ` · ahorraste ${formatCurrency(it.discountAppliedSnapshot)}`}
+                      </p>
+                    )}
+                  </div>
+                  <span className="flex items-baseline gap-2 whitespace-nowrap sm:shrink-0 sm:flex-col sm:items-end sm:gap-0">
+                    {!closed && (it.discountAppliedSnapshot || 0) > 0 && (
+                      <span className="text-xs text-ink-400 line-through tabular-nums">{formatCurrency(itemTotal(it) + (it.discountAppliedSnapshot || 0))}</span>
+                    )}
+                    <span className={cn('font-semibold tabular-nums', closed ? 'text-ink-800 line-through' : (it.discountAppliedSnapshot || 0) > 0 ? 'text-leaf-600' : 'text-ink-800')}>
+                      {formatCurrency(itemTotal(it))}
+                    </span>
                   </span>
-                </span>
+                </div>
               </li>
             );
           })}

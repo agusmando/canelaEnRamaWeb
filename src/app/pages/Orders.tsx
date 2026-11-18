@@ -14,7 +14,7 @@ import { cld } from '../lib/cloudinary';
 
 export function StatusBadge({ status, method }: { status: Order['status']; method?: string | null }) {
   const s = orderStatusInfo(status, method) ?? { label: status, className: 'bg-ink-50 text-ink-600 ring-ink-200' };
-  return <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', s.className)}>{s.label}</span>;
+  return <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset', s.className)}>{s.label}</span>;
 }
 
 export function OrderRow({ order }: { order: Order }) {
@@ -36,26 +36,28 @@ export function OrderRow({ order }: { order: Order }) {
             </span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-ink-800">Pedido {orderNumber(order.id)}</span>
-            <StatusBadge status={order.status} method={orderMethod(order)} />
-            {order.shipment && <ShipmentChip status={order.shipment.status} />}
-            {order.paymentType === 'MERCADOPAGO' && order.paymentStatus && order.status !== 'CANCELLED' && (canPayOnline(order) || order.paymentStatus === 'IN_PROCESS') && (
-              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${PAYMENT_STATUS[order.paymentStatus].className}`}>
-                {PAYMENT_STATUS[order.paymentStatus].label}
-              </span>
-            )}
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-ink-800">Pedido {orderNumber(order.id)}</span>
+              <StatusBadge status={order.status} method={orderMethod(order)} />
+              {order.shipment && <ShipmentChip status={order.shipment.status} />}
+              {order.paymentType === 'MERCADOPAGO' && order.paymentStatus && order.status !== 'CANCELLED' && (canPayOnline(order) || order.paymentStatus === 'IN_PROCESS') && (
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ${PAYMENT_STATUS[order.paymentStatus].className}`}>
+                  {PAYMENT_STATUS[order.paymentStatus].label}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-ink-500">
+              {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
+              {order.shippingMethod === 'DELIVERY' && <> · {SHIPMENT_METHOD.DELIVERY}</>}
+            </p>
           </div>
-          <p className="mt-1 text-sm text-ink-500">
-            {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
-            {order.shippingMethod === 'DELIVERY' && <> · {SHIPMENT_METHOD.DELIVERY}</>}
-          </p>
+          <span className="flex flex-wrap items-baseline gap-x-2 sm:shrink-0 sm:flex-col sm:items-end sm:text-right">
+            <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(orderTotal(order))}</span>
+            {saved > 0 && <span className="text-xs font-medium whitespace-nowrap text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
+          </span>
         </div>
-        <span className="flex shrink-0 flex-col items-end text-right">
-          <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(orderTotal(order))}</span>
-          {saved > 0 && <span className="text-xs font-medium text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
-        </span>
         <Chevron className="size-5 shrink-0 text-ink-400 group-hover:text-brand-500" />
       </Link>
     </li>
