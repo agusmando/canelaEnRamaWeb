@@ -215,6 +215,9 @@ export interface Order {
   paymentStatus?: PaymentStatus;
   paymentStatusDetail?: string | null;
   paidAt?: ISODate | null;
+  /** Reintegros por Mercado Pago (total o parcial). */
+  refundedAmount?: number;
+  refunds?: { id: number; amount: number; createdAt: ISODate }[];
   estimatedReadyAt: ISODate | null;
   status: OrderStatus;
   orderItems?: OrderItem[];

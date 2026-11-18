@@ -308,6 +308,18 @@ export default function OrderDetail() {
             <dt className="text-base font-semibold text-ink-800">Total</dt>
             <dd className="text-xl font-bold text-ink-800 tabular-nums">{formatCurrency(orderTotal(order))}</dd>
           </div>
+          {(order.refunds ?? []).map((r) => (
+            <div key={r.id} className="flex justify-between gap-3 text-leaf-600">
+              <dt>Te devolvimos el {formatDate(r.createdAt)}</dt>
+              <dd className="tabular-nums whitespace-nowrap">{formatCurrency(r.amount)}</dd>
+            </div>
+          ))}
+          {!order.refunds?.length && (order.refundedAmount ?? 0) > 0 && (
+            <div className="flex justify-between gap-3 text-leaf-600">
+              <dt>Te devolvimos</dt>
+              <dd className="tabular-nums whitespace-nowrap">{formatCurrency(order.refundedAmount!)}</dd>
+            </div>
+          )}
         </dl>
       </section>
     </div>
