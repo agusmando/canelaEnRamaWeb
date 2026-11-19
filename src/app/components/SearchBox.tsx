@@ -2,37 +2,44 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
 import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
-import { cardPrice, LOCAL_LABEL, localKind, localSearchText, matchesWords, normalize, productImages, slugify } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, productImages, searchScore, searchWords, stem, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
 import { cld } from '../lib/cloudinary';
 
-/** Resalta en `text` la parte que coincide con `term` (sin distinguir mayúsculas ni tildes). */
+/** Resalta en `text` el comienzo de cada palabra que coincide con lo buscado (sin distinguir mayúsculas ni tildes). */
 function Highlight({ text, term }: { text: string; term: string }) {
-  const t = normalize(term.trim());
-  if (t.length < 2) return <>{text}</>;
-  // Mapa carácter a carácter para recuperar la posición en el texto original
+  const words = searchWords(term);
   const chars = [...text];
-  const norm = chars.map((c) => normalize(c));
-  const joined = norm.join('');
-  const at = joined.indexOf(t);
-  if (at < 0) return <>{text}</>;
-  let pos = 0;
-  let start = -1;
-  let end = chars.length;
-  for (let i = 0; i < chars.length; i++) {
-    if (start < 0 && pos >= at) start = i;
-    pos += norm[i].length;
-    if (pos >= at + t.length) {
-      end = i + 1;
-      break;
+  const norm = chars.map((c) => normalize(c)).join('');
+  // Cada carácter tiene que normalizar a uno solo para ubicar las posiciones
+  if (!words.length || norm.length !== chars.length) return <>{text}</>;
+  const marked = new Array<boolean>(chars.length).fill(false);
+  for (const m of norm.matchAll(/[a-z0-9]+/g)) {
+    const token = m[0];
+    let len = 0;
+    for (const w of words) {
+      if (token.startsWith(w)) len = Math.max(len, w.length);
+      else if (stem(token).startsWith(stem(w))) len = Math.max(len, Math.min(stem(w).length, token.length));
     }
+    for (let i = 0; i < len; i++) marked[m.index! + i] = true;
   }
-  if (start < 0) return <>{text}</>;
+  const parts: { text: string; mark: boolean }[] = [];
+  chars.forEach((c, i) => {
+    const last = parts[parts.length - 1];
+    if (last && last.mark === marked[i]) last.text += c;
+    else parts.push({ text: c, mark: marked[i] });
+  });
   return (
     <>
-      {chars.slice(0, start).join('')}
-      <mark className="rounded-sm bg-brand-100 px-px font-semibold text-brand-700">{chars.slice(start, end).join('')}</mark>
-      {chars.slice(end).join('')}
+      {parts.map((p, i) =>
+        p.mark ? (
+          <mark key={i} className="rounded-sm bg-brand-100 px-px font-semibold text-brand-700">
+            {p.text}
+          </mark>
+        ) : (
+          p.text
+        ),
+      )}
     </>
   );
 }
@@ -83,18 +90,29 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
   const searching = normalize(term).length >= 2;
 
   const results = useMemo(() => {
-    const term = normalize(q.trim());
-    if (term.length < 2 || !catalog) return [];
-    return catalog
-      .filter((p) =>
-        matchesWords(
-          normalize(
-            `${p.name} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
+    if (normalize(q.trim()).length < 2 || !catalog) return [];
+    const words = searchWords(q);
+    if (!words.length) return [];
+    const rank = (partial: boolean) =>
+      catalog
+        .map((p) => ({
+          p,
+          score: searchScore(
+            normalize(p.name),
+            normalize(
+              `${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
+            ),
+            words,
+            partial,
           ),
-          term,
-        ),
-      )
-      .slice(0, 6);
+        }))
+        .filter((x): x is { p: (typeof catalog)[number]; score: number } => x.score !== null);
+    let found = rank(false);
+    if (!found.length && words.length >= 3) found = rank(true);
+    return found
+      .sort((a, b) => a.score - b.score || a.p.name.localeCompare(b.p.name, 'es'))
+      .slice(0, 6)
+      .map((x) => x.p);
   }, [q, catalog]);
 
   const submit = (e?: React.FormEvent, all = false) => {

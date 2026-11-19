@@ -8,7 +8,7 @@ import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
-import { cardPrice, LOCAL_LABEL, localKind, localSearchText, matchesWords, normalize, selectOffer, slugify, webVariants } from '../lib/shop';
+import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, searchScore, searchWords, selectOffer, slugify, webVariants } from '../lib/shop';
 import { cn, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
@@ -73,8 +73,8 @@ export default function Catalog() {
   }, [items]);
 
   const filtered = useMemo(() => {
-    const term = normalize(q.trim());
-    const out = items.filter(({ p, info }) => {
+    const words = searchWords(q);
+    const passesFilters = ({ p, info }: (typeof items)[number]) => {
       if (selCats.length && !selCats.includes(slugify(p.Category?.name ?? ''))) return false;
       const ptags = (p.Tags ?? []).map((t) => slugify(t.name));
       if (selTags.length && !selTags.every((t) => ptags.includes(t))) return false;
@@ -84,22 +84,23 @@ export default function Catalog() {
       if (min !== null && info.price < min) return false;
       if (max !== null && info.price > max) return false;
       if (onlyOffers && !webVariants(p).some((v) => selectOffer(v, p))) return false;
-      if (term) {
-        const hay = normalize(
-          `${p.name} ${p.description ?? ''} ${p.Category?.name ?? ''} ${localKind(p) === 'all' ? '' : (p.Brand?.name ?? '')} ${(p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(p)}`,
-        );
-        if (!matchesWords(hay, term)) return false;
-      }
       return true;
-    });
-    const byRelevance = (a: (typeof out)[number], b: (typeof out)[number]) => {
-      if (term) {
-        const an = normalize(a.p.name).startsWith(term) ? 0 : 1;
-        const bn = normalize(b.p.name).startsWith(term) ? 0 : 1;
-        if (an !== bn) return an - bn;
-      }
-      return Number(b.info.hasStock) - Number(a.info.hasStock) || a.p.name.localeCompare(b.p.name, 'es');
     };
+    const base = items.filter(passesFilters);
+    const score = (partial: boolean) =>
+      base
+        .map((x) => {
+          const rest = normalize(
+            `${x.p.description ?? ''} ${x.p.Category?.name ?? ''} ${localKind(x.p) === 'all' ? '' : (x.p.Brand?.name ?? '')} ${(x.p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(x.p)}`,
+          );
+          return { ...x, score: words.length ? searchScore(normalize(x.p.name), rest, words, partial) : 0 };
+        })
+        .filter((x): x is typeof x & { score: number } => x.score !== null);
+    // Con 3+ palabras y nada que coincida con todas, lo que coincide con todas menos una
+    let out = score(false);
+    if (!out.length && words.length >= 3) out = score(true);
+    const byRelevance = (a: (typeof out)[number], b: (typeof out)[number]) =>
+      a.score - b.score || Number(b.info.hasStock) - Number(a.info.hasStock) || a.p.name.localeCompare(b.p.name, 'es');
     const sorters: Record<string, typeof byRelevance> = {
       relevancia: byRelevance,
       'precio-asc': (a, b) => a.info.price - b.info.price,
