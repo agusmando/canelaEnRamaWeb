@@ -11,7 +11,7 @@ export function Footer() {
 
   return (
     <footer className="mt-16 bg-ink-800 text-white/80">
-      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-10 px-6 pt-12 pb-24 sm:grid-cols-2 sm:px-8 sm:pb-12 lg:grid-cols-[1.3fr_1.4fr_auto_1fr_auto] lg:gap-12">
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-10 px-6 pt-12 pb-24 sm:grid-cols-2 sm:px-8 sm:pb-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_auto_minmax(0,1fr)_auto] lg:gap-8 xl:gap-12">
         <div className="sm:col-span-2 lg:col-span-1">
           <Logo variant="white" className="h-14" />
           <p className="mt-6 max-w-sm text-sm leading-relaxed">
@@ -29,7 +29,7 @@ export function Footer() {
 
         <div>
           <h2 className="mb-4 font-semibold tracking-wide text-white uppercase">Categorías</h2>
-          <ul className="columns-2 gap-6 text-sm sm:columns-3">
+          <ul className="columns-2 gap-6 text-sm sm:columns-3 lg:columns-2 xl:columns-3">
             {categories.map((c) => (
               <li key={c.id} className="mb-2.5 break-inside-avoid">
                 <Link to={`/productos?categoria=${slugify(c.name)}`} className="inline-block py-0.5 break-words hover:text-white hover:underline">
