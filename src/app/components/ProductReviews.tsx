@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { toast } from 'sonner';
 import { BadgeCheck, MessageSquareText, Pencil, PenLine, Store, Trash2, X } from 'lucide-react';
 import {
   useCreateReviewMutation,
@@ -17,6 +16,8 @@ import { cn, formatDate, formatNumber } from '../lib/utils';
 import { SectionHeader } from './SectionHeader';
 import { Spinner } from './States';
 import { StarInput, Stars, formatRating } from './Stars';
+import { ActionButton } from './ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
 
 export const REVIEWS_ANCHOR = 'opiniones';
 const PER_PAGE = 5;
@@ -426,9 +427,9 @@ function MyReview({ productId, entry, onEdit }: { productId: Id; entry: ReviewEl
     if (!window.confirm('¿Seguro que querés eliminar tu opinión?')) return;
     try {
       await remove({ id: r.id, productId }).unwrap();
-      toast.success('Eliminamos tu opinión.');
+      showSuccess('Eliminamos tu opinión.');
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
   return (
@@ -445,9 +446,9 @@ function MyReview({ productId, entry, onEdit }: { productId: Id; entry: ReviewEl
         <button type="button" onClick={onEdit} className="btn-ghost h-9 px-2 text-xs">
           <Pencil className="size-3.5" /> Editar
         </button>
-        <button type="button" onClick={doRemove} disabled={removing} className="btn-ghost h-9 px-2 text-xs text-brand-600 hover:bg-brand-50 hover:text-brand-700">
-          {removing ? <Spinner className="size-3.5" /> : <Trash2 className="size-3.5" />} Eliminar
-        </button>
+        <ActionButton type="button" onClick={doRemove} loading={removing} loadingLabel="Eliminando…" className="btn-ghost h-9 px-2 text-xs text-brand-600 hover:bg-brand-50 hover:text-brand-700">
+          <Trash2 className="size-3.5" /> Eliminar
+        </ActionButton>
       </div>
     </li>
   );
@@ -503,7 +504,6 @@ function ReviewForm({
     try {
       if (editing) await update({ id: editing.id, rating, title: t || null, comment: c || null }).unwrap();
       else await create({ productVariantId: Number(variantId), rating, ...(t ? { title: t } : {}), ...(c ? { comment: c } : {}) }).unwrap();
-      toast.success(THANKS);
       onClose();
     } catch (err) {
       const status = (err as { status?: number }).status;
@@ -514,6 +514,7 @@ function ReviewForm({
             ? 'Ya dejaste una opinión para esta presentación. Podés editarla desde “Tu opinión”.'
             : getErrorMessage(err),
       );
+      if (status !== 403 && status !== 409) showError(err);
     }
   };
 
@@ -605,9 +606,9 @@ function ReviewForm({
           <button type="button" onClick={onClose} className="btn-ghost h-11 px-5">
             Cancelar
           </button>
-          <button type="submit" disabled={busy} className="btn-primary h-11 px-6">
-            {busy && <Spinner className="size-4" />} {editing ? 'Guardar cambios' : 'Enviar opinión'}
-          </button>
+          <ActionButton type="submit" loading={busy} loadingLabel={editing ? 'Guardando cambios…' : 'Enviando opinión…'} className="btn-primary h-11 px-6">
+            {editing ? 'Guardar cambios' : 'Enviar opinión'}
+          </ActionButton>
         </div>
         <p className="text-xs text-ink-400">Revisamos cada opinión antes de publicarla. Se muestra tu nombre y la inicial de tu apellido.</p>
       </div>

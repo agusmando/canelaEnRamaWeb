@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { toast } from 'sonner';
 import { Check, ChevronRight, ImageOff, ShoppingCart, Sprout } from 'lucide-react';
 import type { Product } from '../api/types';
 import { useAddToCartMutation } from '../api/shopApi';
@@ -12,6 +11,7 @@ import { cn, formatCurrency } from '../lib/utils';
 import { cldImg } from '../lib/cloudinary';
 import { FavoriteButton } from './FavoriteButton';
 import { Spinner } from './States';
+import { showError } from '../lib/notifications';
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const info = cardPrice(product);
@@ -137,7 +137,7 @@ function CardAction({ product, to }: { product: Product; to: string }) {
       window.setTimeout(() => setDone(false), 1600);
       dispatch(setDrawerOpen(true));
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
 

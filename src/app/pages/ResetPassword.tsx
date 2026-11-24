@@ -3,11 +3,12 @@ import { Link, useSearchParams } from 'react-router';
 import { CheckCircle2, Lock } from 'lucide-react';
 import { AuthShell } from '../components/AuthShell';
 import { Field, FormError } from '../components/Field';
-import { Spinner } from '../components/States';
 import { resetPassword } from '../store/authSlice';
 import { getErrorMessage } from '../api/client';
 import { PasswordChecklist, passwordRules } from './Register';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ActionButton } from '../components/ActionButton';
+import { showError } from '../lib/notifications';
 
 /** Destino del enlace que envía SuperTokens: `/auth/reset-password?token=…`. */
 export default function ResetPassword() {
@@ -29,7 +30,9 @@ export default function ResetPassword() {
       await resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setError(message);
+      showError(err);
     } finally {
       setLoading(false);
     }
@@ -58,9 +61,9 @@ export default function ResetPassword() {
             <PasswordChecklist password={password} />
           </div>
           <Field label="Repetí la contraseña" name="confirm" type="password" autoComplete="new-password" icon={<Lock className="size-5" />} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-          <button type="submit" disabled={loading} className="btn-primary h-[52px] w-full text-lg font-semibold">
-            {loading && <Spinner />} Guardar contraseña
-          </button>
+          <ActionButton type="submit" loading={loading} loadingLabel="Guardando contraseña…" className="btn-primary h-[52px] w-full text-lg font-semibold">
+            Guardar contraseña
+          </ActionButton>
         </form>
       )}
     </AuthShell>

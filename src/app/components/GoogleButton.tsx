@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { startGoogleSignIn } from '../store/authSlice';
-import { getErrorMessage } from '../api/client';
-import { Spinner } from './States';
+import { ActionButton } from './ActionButton';
+import { showError } from '../lib/notifications';
 
 export function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -18,22 +17,23 @@ export function GoogleIcon({ className }: { className?: string }) {
 export function GoogleButton({ label, returnTo }: { label: string; returnTo: string }) {
   const [loading, setLoading] = useState(false);
   return (
-    <button
+    <ActionButton
       type="button"
-      disabled={loading}
+      loading={loading}
+      loadingLabel="Conectando con Google…"
       onClick={async () => {
         setLoading(true);
         try {
           await startGoogleSignIn(returnTo);
         } catch (e) {
-          toast.error(getErrorMessage(e));
+          showError(e);
           setLoading(false);
         }
       }}
       className="btn h-12 w-full border border-ink-300 bg-white text-[15px] text-ink-800 hover:border-ink-400 hover:bg-ink-50"
     >
-      {loading ? <Spinner /> : <GoogleIcon className="size-5" />}
+      <GoogleIcon className="size-5" />
       {label}
-    </button>
+    </ActionButton>
   );
 }

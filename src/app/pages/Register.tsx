@@ -4,12 +4,13 @@ import { ArrowRight, Check, Lock, Mail } from 'lucide-react';
 import { AuthShell } from '../components/AuthShell';
 import { Divider, Field, FormError } from '../components/Field';
 import { GoogleButton } from '../components/GoogleButton';
-import { Spinner } from '../components/States';
+import { ActionButton } from '../components/ActionButton';
 import { useAppDispatch, useAppSelector } from '../store';
 import { signUp } from '../store/authSlice';
 import { useReturnTo } from '../hooks/useReturnTo';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cn } from '../lib/utils';
+import { showError } from '../lib/notifications';
 
 /** Reglas por defecto de SuperTokens: 8+ caracteres, al menos una letra y un número. */
 export const passwordRules = (p: string) => [
@@ -59,7 +60,11 @@ export default function Register() {
     const res = await dispatch(signUp({ email, password }));
     setLoading(false);
     if (signUp.fulfilled.match(res)) navigate(returnTo, { replace: true });
-    else setError(res.payload ?? 'No se pudo crear la cuenta.');
+    else {
+      const message = res.payload ?? 'No se pudo crear la cuenta.';
+      setError(message);
+      showError({ message });
+    }
   };
 
   return (
@@ -116,9 +121,9 @@ export default function Register() {
           error={(touched || confirm.length >= password.length) && mismatch ? 'Las contraseñas no coinciden.' : undefined}
           required
         />
-        <button type="submit" disabled={loading} className="btn-primary h-[52px] w-full text-lg font-semibold">
-          {loading && <Spinner />} Crear cuenta
-        </button>
+        <ActionButton type="submit" loading={loading} loadingLabel="Creando cuenta…" className="btn-primary h-[52px] w-full text-lg font-semibold">
+          Crear cuenta
+        </ActionButton>
         <p className="text-center text-sm text-ink-500">Al registrarte aceptás que te contactemos por tus pedidos.</p>
       </form>
     </AuthShell>

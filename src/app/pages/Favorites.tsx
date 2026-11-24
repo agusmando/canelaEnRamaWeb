@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
-import { toast } from 'sonner';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { useAddToCartMutation, useCatalogQuery } from '../api/shopApi';
-import { getErrorMessage } from '../api/client';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState, Spinner } from '../components/States';
@@ -13,6 +11,9 @@ import { setDrawerOpen } from '../store/cartSlice';
 import { removeFavorite } from '../store/prefsSlice';
 import { quickAddLine } from '../lib/shop';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ActionButton } from '../components/ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
+import { getErrorMessage } from '../api/client';
 
 /** Lista de deseos (guardada en el navegador). */
 export default function Favorites() {
@@ -37,7 +38,7 @@ export default function Favorites() {
       await add(quick.map(({ label: _l, ...item }) => item)).unwrap();
       dispatch(setDrawerOpen(true));
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
 
@@ -60,10 +61,9 @@ export default function Favorites() {
           )}
         </div>
         {quick.length > 0 && (
-          <button onClick={addAll} disabled={adding} className="btn-primary min-h-11 w-full px-5 py-2 text-center whitespace-normal sm:w-auto">
-            {adding ? <Spinner className="size-4" /> : <ShoppingCart className="size-4" />}
+          <ActionButton onClick={addAll} loading={adding} loadingLabel="Agregando…" className="btn-primary min-h-11 w-full px-5 py-2 text-center whitespace-normal sm:w-auto">
             Agregar {quick.length === products.length ? 'todos' : `${quick.length} disponibles`} al carrito
-          </button>
+          </ActionButton>
         )}
       </div>
 

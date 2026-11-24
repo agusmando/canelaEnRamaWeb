@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { MessageCircle, PackageSearch, Search } from 'lucide-react';
+import { MessageCircle, PackageSearch } from 'lucide-react';
 import { useTrackShipmentQuery } from '../api/shopApi';
 import { getErrorMessage } from '../api/client';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { EmptyState, ErrorState, Spinner } from '../components/States';
+import { EmptyState, ErrorState } from '../components/States';
 import { ShipmentDetails } from '../components/ShipmentTracking';
 import { normalizeTrackingCode } from '../lib/shipments';
 import { orderNumber } from '../lib/orders';
 import { whatsappLink } from '../lib/contact';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ActionButton } from '../components/ActionButton';
 
 /** Seguimiento público de envíos: `/seguimiento` y `/seguimiento/:code`. */
 export default function Tracking() {
@@ -58,9 +59,15 @@ export default function Tracking() {
               className="field h-12 pl-11 font-mono text-[17px] tracking-wide uppercase placeholder:font-sans placeholder:tracking-normal placeholder:normal-case"
             />
           </div>
-          <button type="submit" disabled={!normalizeTrackingCode(input) || isFetching} className="btn-primary h-12 px-6">
-            {isFetching ? <Spinner className="size-4" /> : <Search className="size-4" />} Buscar
-          </button>
+          <ActionButton
+            type="submit"
+            loading={isFetching}
+            loadingLabel="Buscando…"
+            disabled={!normalizeTrackingCode(input)}
+            className="btn-primary h-12 px-6"
+          >
+            Buscar
+          </ActionButton>
         </form>
       </div>
 

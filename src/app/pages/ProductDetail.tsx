@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { Link, useParams } from 'react-router';
-import { toast } from 'sonner';
 import { BadgePercent, Check, ChevronLeft, ChevronRight, Clock, ImageOff, PackageCheck, PackageX, Share2, ShoppingCart, Sprout, Store, Tag as TagIcon, Truck, X } from 'lucide-react';
 import { useAddToCartMutation, useCatalogQuery, useProductQuery } from '../api/shopApi';
 import type { Product, ProductVariant } from '../api/types';
@@ -38,6 +37,8 @@ import { cn, formatCurrency } from '../lib/utils';
 import { useSeo } from '../hooks/useSeo';
 import { productSeo } from '../lib/seo';
 import { cld, cldImg, cldSrcSet } from '../lib/cloudinary';
+import { ActionButton } from '../components/ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
 
 /** Venta suelta por peso: mínimo y paso en gramos. */
 const LOOSE_MIN_G = 100;
@@ -133,7 +134,7 @@ function ProductView({ product }: { product: Product }) {
       window.setTimeout(() => setAdded(false), 1800);
       dispatch(setDrawerOpen(true));
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
 
@@ -261,14 +262,16 @@ function ProductView({ product }: { product: Product }) {
                       )}
                     </p>
                   </div>
-                  <button
+                  <ActionButton
                     onClick={add}
-                    disabled={!available || adding}
+                    loading={adding}
+                    loadingLabel="Agregando al carrito…"
+                    disabled={!available}
                     className={cn('btn-primary h-13 w-full shrink-0 rounded-xl px-8 text-[17px] sm:w-auto', added && 'bg-leaf-500 hover:bg-leaf-600')}
                   >
-                    {adding ? <Spinner /> : added ? <Check className="size-5" strokeWidth={3} /> : <ShoppingCart className="size-5" />}
+                    {added ? <Check className="size-5" strokeWidth={3} /> : <ShoppingCart className="size-5" />}
                     {!available ? 'Sin stock' : added ? '¡Agregado!' : 'Agregar al carrito'}
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
             )}
@@ -338,7 +341,7 @@ function ShareButton({ name }: { name: string }) {
         return;
       }
       await navigator.clipboard.writeText(url);
-      toast.success('Link copiado');
+      showSuccess('Link copiado');
     } catch {
       /* el usuario canceló */
     }

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { toast } from 'sonner';
 import { AlertTriangle, ArrowLeft, CalendarClock, Check, CheckCircle2, Clock, ExternalLink, ImageOff, MapPin, MessageCircle, RotateCcw, Store, Truck, Wallet, XCircle } from 'lucide-react';
 import {
   useAddToCartMutation,
@@ -24,6 +23,8 @@ import { whatsappLink } from '../lib/contact';
 import { cn, formatCurrency, formatDate, formatDateTime } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cld } from '../lib/cloudinary';
+import { ActionButton } from '../components/ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
 
 /** La variante sigue a la venta en la web (si el API no manda el dato, se asume que sí). */
 const isSellable = (v: OrderItem['productVariant']) =>
@@ -66,7 +67,6 @@ export default function OrderDetail() {
       const pref = await createPreference(order.id).unwrap();
       window.location.assign(pref.initPoint);
     } catch (e) {
-      toast.error(getErrorMessage(e));
       refetch();
     }
   };
@@ -82,9 +82,9 @@ export default function OrderDetail() {
     if (!window.confirm('¿Seguro que querés cancelar este pedido?')) return;
     try {
       await cancel(order.id).unwrap();
-      toast.success('Pedido cancelado.');
+      showSuccess('Pedido cancelado.');
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
 
@@ -102,14 +102,15 @@ export default function OrderDetail() {
     try {
       await addToCart(reorderLines).unwrap();
       const skipped = boughtLines.length - reorderLines.length;
-      toast.success(
+      showSuccess(
         skipped
           ? `Agregamos los productos a tu carrito (${skipped === 1 ? '1 ya no está disponible' : `${skipped} ya no están disponibles`})`
           : 'Agregamos los productos a tu carrito',
       );
       dispatch(setDrawerOpen(true));
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
+      refetch();
     }
   };
 
@@ -151,9 +152,9 @@ export default function OrderDetail() {
         </div>
         <div className="flex flex-wrap gap-2">
           {reorderLines.length > 0 && (
-            <button onClick={reorder} disabled={reordering} className="btn-primary h-10 px-4 text-sm">
-              {reordering ? <Spinner className="size-4" /> : <RotateCcw className="size-4" />} Volver a comprar
-            </button>
+            <ActionButton onClick={reorder} loading={reordering} loadingLabel="Agregando…" className="btn-primary h-10 px-4 text-sm">
+              Volver a comprar
+            </ActionButton>
           )}
           <a
             href={whatsappLink(`Hola! Consulto por mi pedido ${orderNumber(order.id)}`)}
@@ -164,9 +165,9 @@ export default function OrderDetail() {
             <MessageCircle className="size-4" /> Consultar
           </a>
           {order.status === 'PENDING' && !paymentLocked && (
-            <button onClick={doCancel} disabled={cancelling} className="btn-ghost h-10 px-4 text-sm text-brand-600 hover:bg-brand-50 hover:text-brand-700">
-              {cancelling ? <Spinner className="size-4" /> : <XCircle className="size-4" />} Cancelar pedido
-            </button>
+            <ActionButton onClick={doCancel} loading={cancelling} loadingLabel="Cancelando…" className="btn-ghost h-10 px-4 text-sm text-brand-600 hover:bg-brand-50 hover:text-brand-700">
+              Cancelar pedido
+            </ActionButton>
           )}
         </div>
       </div>
@@ -330,10 +331,16 @@ export default function OrderDetail() {
 function PaymentBanner({ order, syncing, redirecting, onPay }: { order: Order; syncing: boolean; redirecting: boolean; onPay: () => void }) {
   const status = order.paymentStatus ?? 'PENDING';
   const payButton = canPayOnline(order) && (
-    <button onClick={onPay} disabled={redirecting || syncing} className="btn-primary mt-3 h-11 px-5 text-sm">
-      {redirecting ? <Spinner className="size-4" /> : <Wallet className="size-4" />}
+    <ActionButton
+      onClick={onPay}
+      loading={redirecting}
+      loadingLabel="Abriendo Mercado Pago…"
+      disabled={syncing}
+      className="btn-primary mt-3 h-11 px-5 text-sm"
+    >
+      <Wallet className="size-4" />
       {status === 'REJECTED' || status === 'CANCELLED' ? 'Reintentar el pago' : 'Pagar con Mercado Pago'}
-    </button>
+    </ActionButton>
   );
 
   if (syncing && status !== 'APPROVED') {

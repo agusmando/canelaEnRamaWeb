@@ -4,11 +4,12 @@ import { ArrowRight, Lock, Mail } from 'lucide-react';
 import { AuthShell } from '../components/AuthShell';
 import { Divider, Field, FormError } from '../components/Field';
 import { GoogleButton } from '../components/GoogleButton';
-import { Spinner } from '../components/States';
+import { ActionButton } from '../components/ActionButton';
 import { useAppDispatch, useAppSelector } from '../store';
 import { clearNotice, signIn } from '../store/authSlice';
 import { useReturnTo } from '../hooks/useReturnTo';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { showError } from '../lib/notifications';
 
 export default function Login() {
   useDocumentTitle('Acceder', { noindex: true });
@@ -37,7 +38,11 @@ export default function Login() {
     const res = await dispatch(signIn({ email, password }));
     setLoading(false);
     if (signIn.fulfilled.match(res)) navigate(returnTo, { replace: true });
-    else setError(res.payload ?? 'No se pudo iniciar sesión.');
+    else {
+      const message = res.payload ?? 'No se pudo iniciar sesión.';
+      setError(message);
+      showError({ message });
+    }
   };
 
   return (
@@ -87,9 +92,15 @@ export default function Login() {
             </Link>
           </p>
         </div>
-        <button type="submit" disabled={loading || !email || !password} className="btn-primary h-[52px] w-full text-lg font-semibold">
-          {loading && <Spinner />} Iniciá sesión
-        </button>
+        <ActionButton
+          type="submit"
+          loading={loading}
+          loadingLabel="Iniciando sesión…"
+          disabled={!email || !password}
+          className="btn-primary h-[52px] w-full text-lg font-semibold"
+        >
+          Iniciá sesión
+        </ActionButton>
       </form>
     </AuthShell>
   );

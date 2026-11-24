@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { toast } from 'sonner';
 import { ArrowRight, BadgeCheck, Mail, MailWarning, ShieldCheck } from 'lucide-react';
 import { useMyOrdersQuery } from '../api/shopApi';
 import { getErrorMessage } from '../api/client';
 import { useAppSelector } from '../store';
 import { isEmailVerified, sendVerificationEmail } from '../store/authSlice';
-import { Spinner } from '../components/States';
 import { OrderRow } from './Orders';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ActionButton } from '../components/ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
 
 export default function Profile() {
   useDocumentTitle('Mi cuenta', { noindex: true });
@@ -95,9 +95,9 @@ function EmailVerification() {
     try {
       await sendVerificationEmail();
       setSent(true);
-      toast.success('Te mandamos un mail para confirmar tu email');
+      showSuccess('Te mandamos un mail para confirmar tu email');
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     } finally {
       setSending(false);
     }
@@ -107,10 +107,16 @@ function EmailVerification() {
       <p className="inline-flex items-center gap-1.5 text-ink-600">
         <MailWarning className="size-4 text-brand-500" aria-hidden /> Email sin confirmar
       </p>
-      <button type="button" onClick={send} disabled={sending || sent} className="btn-ghost mt-1 -ml-2 h-9 px-2 text-sm font-medium text-brand-600">
-        {sending && <Spinner className="size-4" />}
+      <ActionButton
+        type="button"
+        onClick={send}
+        loading={sending}
+        loadingLabel="Enviando email…"
+        disabled={sent}
+        className="btn-ghost mt-1 -ml-2 h-9 px-2 text-sm font-medium text-brand-600"
+      >
         {sent ? 'Revisá tu casilla (y la carpeta de spam)' : 'Enviar mail de confirmación'}
-      </button>
+      </ActionButton>
     </div>
   );
 }

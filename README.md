@@ -102,5 +102,6 @@ El carrito de invitado se identifica con el `sessionId` que devuelve `POST /cart
 - Las reseñas del login están en `src/app/components/AuthShell.tsx` (tomadas del diseño): reemplazarlas por reseñas reales.
 
 ```bash
+npm test
 npm run typecheck && npm run build
 ```

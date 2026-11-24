@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { toast } from 'sonner';
-import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Clock, CircleCheck, CreditCard, ImageOff, Landmark, Lock, MapPin, ShieldCheck, ShoppingBag, Store, Trash2, Truck, Wallet, X, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Clock, CircleCheck, CreditCard, ImageOff, Landmark, Lock, MapPin, ShoppingBag, Store, Trash2, Truck, Wallet, X, type LucideIcon } from 'lucide-react';
 import {
   useCartQuery,
   useCheckoutMutation,
@@ -18,6 +17,7 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { QtyStepper } from '../components/QtyStepper';
 import { EmptyState, ErrorState, PageLoader, Spinner } from '../components/States';
 import { AddressModal } from '../components/AddressForm';
+import { ActionButton } from '../components/ActionButton';
 import { useAppSelector, useCartKey } from '../store';
 import { PAYMENT_OPTIONS } from '../lib/orders';
 import { SHIPMENT_METHOD, addressArea, addressLine, etaLabel } from '../lib/shipments';
@@ -25,6 +25,7 @@ import { packLabel, stockUnit } from '../lib/shop';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cld } from '../lib/cloudinary';
+import { showError, showSuccess } from '../lib/notifications';
 
 const PAYMENT_ICONS: Record<PaymentType, LucideIcon> = {
   MERCADOPAGO: Wallet,
@@ -105,7 +106,7 @@ export default function Cart() {
     try {
       await updateCart(body).unwrap();
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
     }
   };
 
@@ -120,15 +121,15 @@ export default function Cart() {
           return;
         } catch (e) {
           // El pedido ya está creado: se puede reintentar el pago desde su detalle
-          toast.error(`No pudimos abrir Mercado Pago: ${getErrorMessage(e)}. Podés reintentar desde tu pedido.`);
+          showError(`No pudimos abrir Mercado Pago: ${getErrorMessage(e)}. Podés reintentar desde tu pedido.`);
           navigate(`/mi-cuenta/pedidos/${order.id}?nuevo=1`);
           return;
         }
       }
-      toast.success('¡Pedido confirmado!');
+      showSuccess('¡Pedido confirmado!');
       navigate(`/mi-cuenta/pedidos/${order.id}?nuevo=1`);
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      showError(e);
       refetch();
       if (delivery && address) quoteQuery.refetch();
     }
@@ -286,11 +287,16 @@ export default function Cart() {
               </p>
 
               {authStatus === 'authenticated' ? (
-                <button onClick={finish} disabled={placing || redirecting || isFetching || syncing || !deliveryReady || !payment} className="btn-primary mt-6 h-13 w-full rounded-xl text-base sm:text-[17px]">
-                  {placing || redirecting ? <Spinner /> : <ShieldCheck className="size-5" />}
-                  {redirecting ? 'Abriendo Mercado Pago…' : payment === 'MERCADOPAGO' ? 'Pagar con Mercado Pago' : 'Finalizar compra'}
+                <ActionButton
+                  onClick={finish}
+                  loading={placing || redirecting}
+                  loadingLabel={redirecting ? 'Abriendo Mercado Pago…' : 'Confirmando compra…'}
+                  disabled={isFetching || syncing || !deliveryReady || !payment}
+                  className="btn-primary mt-6 h-13 w-full rounded-xl text-base sm:text-[17px]"
+                >
+                  {payment === 'MERCADOPAGO' ? 'Pagar con Mercado Pago' : 'Finalizar compra'}
                   <ArrowRight className="size-4" />
-                </button>
+                </ActionButton>
               ) : (
                 <>
                   <Link to="/login" state={{ from: '/carrito' }} className="btn-primary mt-6 h-13 w-full rounded-xl px-3 text-center text-base leading-tight whitespace-normal sm:text-[17px]">

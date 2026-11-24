@@ -1,5 +1,4 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { MapPin, X } from 'lucide-react';
 import { useMyAddressQuery, useSaveAddressMutation, useShippingConfigQuery } from '../api/shopApi';
 import type { UserAddress, UserAddressInput } from '../api/types';
@@ -7,6 +6,8 @@ import { getErrorMessage } from '../api/client';
 import { FormError } from './Field';
 import { Spinner } from './States';
 import { cn } from '../lib/utils';
+import { ActionButton } from './ActionButton';
+import { showError, showSuccess } from '../lib/notifications';
 
 type Values = Required<UserAddressInput>;
 type Key = keyof Values;
@@ -106,10 +107,11 @@ export function AddressForm({ defaultName, submitLabel = 'Guardar domicilio', on
     }
     try {
       const saved = await save(toInput(values)).unwrap();
-      toast.success('Guardamos tu domicilio');
+      showSuccess('Guardamos tu domicilio');
       onSaved?.(saved);
     } catch (err) {
       setFormError(getErrorMessage(err));
+      showError(getErrorMessage(err));
     }
   };
 
@@ -179,9 +181,9 @@ export function AddressForm({ defaultName, submitLabel = 'Guardar domicilio', on
             Cancelar
           </button>
         )}
-        <button type="submit" disabled={saving} className="btn-primary h-12 px-6 text-base">
-          {saving ? <Spinner className="size-4" /> : <MapPin className="size-4" />} {submitLabel}
-        </button>
+        <ActionButton type="submit" loading={saving} loadingLabel="Guardando domicilio…" className="btn-primary h-12 px-6 text-base">
+          {submitLabel}
+        </ActionButton>
       </div>
     </form>
   );

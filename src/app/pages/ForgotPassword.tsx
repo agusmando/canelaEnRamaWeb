@@ -3,10 +3,11 @@ import { Link, useLocation } from 'react-router';
 import { ArrowLeft, Mail, MailCheck } from 'lucide-react';
 import { AuthShell } from '../components/AuthShell';
 import { Field, FormError } from '../components/Field';
-import { Spinner } from '../components/States';
 import { requestPasswordReset } from '../store/authSlice';
 import { getErrorMessage } from '../api/client';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ActionButton } from '../components/ActionButton';
+import { showError } from '../lib/notifications';
 
 export default function ForgotPassword() {
   useDocumentTitle('Recuperar contraseña', { noindex: true });
@@ -25,7 +26,9 @@ export default function ForgotPassword() {
       await requestPasswordReset(email);
       setSent(true);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setError(message);
+      showError(err);
     } finally {
       setLoading(false);
     }
@@ -61,9 +64,9 @@ export default function ForgotPassword() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button type="submit" disabled={loading} className="btn-primary h-[52px] w-full text-lg font-semibold">
-              {loading && <Spinner />} Enviar enlace
-            </button>
+            <ActionButton type="submit" loading={loading} loadingLabel="Enviando enlace…" className="btn-primary h-[52px] w-full text-lg font-semibold">
+              Enviar enlace
+            </ActionButton>
           </form>
         </>
       )}
