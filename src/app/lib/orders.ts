@@ -27,7 +27,8 @@ export const ORDER_STEPS: OrderStatus[] = ['PENDING', 'PROCESSING', 'SHIPPED', '
 export const ITEM_STATUS: Record<OrderItemStatus, string> = {
   FULFILLED: '',
   AWAITING_STOCK: 'Esperando stock',
-  PARTIALLY_RETURNED: 'Cantidad ajustada',
+  PARTIALLY_RETURNED: 'Cantidad reducida',
+  OUT_OF_STOCK: 'Sin stock disponible',
   CANCELLED: 'Cancelado',
   RETURNED: 'Devuelto',
 };
@@ -61,7 +62,7 @@ export function describeQty(qty: number, bulk: number | null | undefined, m?: Me
 }
 
 export function itemTotal(it: OrderItem) {
-  if (it.status === 'CANCELLED' || it.status === 'RETURNED') return 0;
+  if (it.status === 'CANCELLED' || it.status === 'RETURNED' || it.status === 'OUT_OF_STOCK') return 0;
   const units = it.selectedBulkOption ? it.quantity * it.selectedBulkOption : it.quantity;
   const priceUnits = toPriceUnits(units, it.productVariant?.contentMeasure);
   return Math.max(0, it.unitPriceSnapshot * priceUnits - (it.discountAppliedSnapshot || 0));

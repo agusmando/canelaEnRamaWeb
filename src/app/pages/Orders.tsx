@@ -21,7 +21,7 @@ export function OrderRow({ order }: { order: Order }) {
   const thumbs = (order.orderItems ?? []).map((i) => i.productVariant?.images?.[0]?.secure_url).filter(Boolean).slice(0, 3) as string[];
   const count = order.orderItems?.length ?? order.totalItems;
   const saved = (order.orderItems ?? []).reduce(
-    (n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' ? 0 : i.discountAppliedSnapshot || 0),
+    (n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' || i.status === 'OUT_OF_STOCK' ? 0 : i.discountAppliedSnapshot || 0),
     0,
   );
   return (

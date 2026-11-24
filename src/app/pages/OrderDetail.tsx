@@ -59,7 +59,7 @@ export default function OrderDetail() {
 
   const step = ORDER_STEPS.indexOf(order.status);
   const items = order.orderItems ?? [];
-  const discount = items.reduce((n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' ? 0 : i.discountAppliedSnapshot || 0), 0);
+  const discount = items.reduce((n, i) => n + (i.status === 'CANCELLED' || i.status === 'RETURNED' || i.status === 'OUT_OF_STOCK' ? 0 : i.discountAppliedSnapshot || 0), 0);
 
   const payOnline = async () => {
     try {
@@ -90,7 +90,7 @@ export default function OrderDetail() {
 
   // "Volver a comprar": mismas variantes, presentaciones y cantidades, salvo
   // las que ya no se venden en la web (el API las rechazaría).
-  const boughtLines = items.filter((i) => i.productVariantId && i.status !== 'CANCELLED' && i.status !== 'RETURNED' && i.quantity > 0);
+  const boughtLines = items.filter((i) => i.productVariantId && i.status !== 'CANCELLED' && i.status !== 'RETURNED' && i.status !== 'OUT_OF_STOCK' && i.quantity > 0);
   const reorderLines = boughtLines
     .filter((i) => isSellable(i.productVariant))
     .map((i) => ({
@@ -247,7 +247,7 @@ export default function OrderDetail() {
         <ul className="divide-y divide-ink-100">
           {items.map((it) => {
             const img = it.productVariant?.images?.[0]?.secure_url;
-            const closed = it.status === 'CANCELLED' || it.status === 'RETURNED';
+            const closed = it.status === 'CANCELLED' || it.status === 'RETURNED' || it.status === 'OUT_OF_STOCK';
             const productId = it.productVariant?.product?.active === false ? undefined : it.productVariant?.product?.id;
             return (
               <li key={it.id} className={cn('flex items-center gap-3 p-3.5 sm:gap-4 sm:p-4', closed && 'opacity-60')}>

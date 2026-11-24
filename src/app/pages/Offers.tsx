@@ -99,7 +99,7 @@ export default function Offers() {
       </section>
 
       <div className="container-page space-y-14 py-10 sm:py-12">
-        <BannerStrip className="-mb-4" />
+        <BannerStrip />
         {error ? (
           <ErrorState message={getErrorMessage(error)} onRetry={refetch} />
         ) : isLoading ? (

@@ -255,8 +255,10 @@ function GradientSlide({ slide: s, active }: { slide: HeroSlide; active: boolean
   const colors = s.banner ? bannerColors(s.banner) : {};
   const custom = !!s.banner?.textColor;
   const cta = s.cta ?? (s.banner?.linkUrl ? { to: s.banner.linkUrl, label: 'Ver más' } : null);
+  // El degradé es solo del contenido por defecto; un banner del admin usa su color de fondo (o queda liso).
+  const gradient = s.bg ?? (s.banner ? null : 'from-brand-100 via-brand-50 to-white');
   return (
-    <div className={cn('h-full bg-gradient-to-r', s.bg ?? 'from-brand-100 via-brand-50 to-white')} style={colors}>
+    <div className={cn('h-full', gradient && `bg-gradient-to-r ${gradient}`)} style={colors}>
       <div className="container-page relative flex h-full min-h-[300px] items-center py-12 sm:min-h-[360px] sm:px-20">
         <div className="relative z-10 max-w-xl">
           {s.eyebrow && <p className={cn('text-sm font-semibold tracking-wider uppercase', custom ? 'opacity-80' : 'text-brand-500')}>{s.eyebrow}</p>}
@@ -369,6 +371,11 @@ interface RecTile {
   label: string;
   alt: string;
   size: BannerSize;
+  /** Título y subtítulo sobre la imagen (solo banners del admin). */
+  title?: string | null;
+  subtitle?: string | null;
+  /** Número de posición sobre la imagen (solo banners del admin; los tiles por defecto ya lo traen en la foto). */
+  number?: number;
 }
 
 const RECS: RecTile[] = [
@@ -381,7 +388,17 @@ const RECS: RecTile[] = [
 const bannerToTile = (b: Banner): RecTile | null => {
   const img = b.desktopImageUrl ?? b.mobileImageUrl;
   if (!img) return null;
-  return { key: `banner-${b.id}`, img, mobileImg: b.mobileImageUrl, to: b.linkUrl, label: b.headline || b.name, alt: b.name, size: b.size ?? 'WIDE' };
+  return {
+    key: `banner-${b.id}`,
+    img,
+    mobileImg: b.mobileImageUrl,
+    to: b.linkUrl,
+    label: b.headline || b.name,
+    alt: b.name,
+    size: b.size ?? 'WIDE',
+    title: b.headline,
+    subtitle: b.text,
+  };
 };
 
 /** Agrupa de a dos por fila (el diseño alterna cuadrado + ancho); el último puede quedar solo. */
@@ -399,8 +416,12 @@ function tileClass(tile: RecTile, row: RecTile[]) {
 function Recommendations() {
   const { data: banners, isLoading } = useBannersQuery('HOME_RECOMMENDATION');
   const tiles = useMemo(() => {
-    const fromApi = (banners ?? []).map(bannerToTile).filter((t): t is RecTile => !!t);
-    return fromApi.length ? fromApi : RECS;
+    const fromApi = (banners ?? []).map(bannerToTile).filter((t): t is RecTile => !!t).slice(0, 4);
+    // Cada posición sin banner del admin muestra el tile por defecto.
+    return RECS.map((def, i) => {
+      const t = fromApi[i];
+      return t ? { ...t, number: i + 1 } : def;
+    });
   }, [banners]);
 
   return (
@@ -445,6 +466,20 @@ function Recommendations() {
                     />
                   </picture>
                   <span className="absolute inset-0 bg-ink-900/0 transition-colors group-hover:bg-ink-900/10" />
+                  {r.number != null && (
+                    <span
+                      aria-hidden
+                      className="absolute top-3 left-3 flex size-9 items-center justify-center rounded-full bg-brand-500 text-base font-bold text-white shadow-md sm:size-10 sm:text-lg"
+                    >
+                      {r.number}
+                    </span>
+                  )}
+                  {(r.title || r.subtitle) && (
+                    <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent px-4 pt-10 pb-3 sm:px-5 sm:pb-4">
+                      {r.title && <span className="block text-base leading-snug font-semibold text-white sm:text-lg">{r.title}</span>}
+                      {r.subtitle && <span className="mt-0.5 line-clamp-2 block text-xs text-white/90 sm:text-sm">{r.subtitle}</span>}
+                    </span>
+                  )}
                 </BannerLink>
               ))}
             </div>

@@ -167,7 +167,7 @@ export interface CartLineInput {
 // ---------------------------------------------------------------- Órdenes
 
 export type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-export type OrderItemStatus = 'FULFILLED' | 'AWAITING_STOCK' | 'PARTIALLY_RETURNED' | 'CANCELLED' | 'RETURNED';
+export type OrderItemStatus = 'FULFILLED' | 'AWAITING_STOCK' | 'PARTIALLY_RETURNED' | 'OUT_OF_STOCK' | 'CANCELLED' | 'RETURNED';
 export type PaymentType = 'DEBIT' | 'CREDIT' | 'CASH' | 'TRANSFER' | 'MERCADOPAGO';
 export type PaymentStatus = 'PENDING' | 'IN_PROCESS' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED' | 'CHARGED_BACK';
 
