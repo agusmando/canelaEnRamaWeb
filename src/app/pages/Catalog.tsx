@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { ArrowUpDown, Check, ChevronDown, FilterX, Plus, SearchX, SlidersHorizontal, X } from 'lucide-react';
-import { useBrandsQuery, useCatalogQuery, useCategoriesQuery, useTagsQuery } from '../api/shopApi';
-import type { Product } from '../api/types';
+import { useBrandsQuery, useCatalogSearchQuery, useCategoriesQuery, useLazyCatalogSearchQuery, useTagsQuery } from '../api/shopApi';
+import type { CatalogFacets, CatalogSearchArgs, Product } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
 import { EmptyState, ErrorState } from '../components/States';
-import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, searchScore, searchWords, selectOffer, slugify, webVariants } from '../lib/shop';
+import { LOCAL_LABEL, slugify } from '../lib/shop';
 import { cn, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const PAGE = 12;
+/** Productos que trae cada página del servidor (el botón "Ver más" va pidiendo más). */
+const SERVER_PAGE = 60;
 
 const SORTS = [
   { value: 'relevancia', label: 'Relevancia' },
@@ -28,7 +30,6 @@ type FilterKey = 'categoria' | 'etiqueta' | 'marca';
 
 export default function Catalog() {
   const [params, setParams] = useSearchParams();
-  const { data: catalog, isLoading, error, refetch } = useCatalogQuery();
   const { data: categories = [] } = useCategoriesQuery();
   const { data: tags = [] } = useTagsQuery();
   const { data: brands = [] } = useBrandsQuery();
@@ -45,6 +46,52 @@ export default function Catalog() {
   const min = params.get('min') ? Number(params.get('min')) : null;
   const max = params.get('max') ? Number(params.get('max')) : null;
 
+  // Búsqueda, filtros, orden y primera página los resuelve el servidor.
+  const argsKey = params.toString();
+  const args = useMemo<CatalogSearchArgs>(
+    () => ({
+      q: q || undefined,
+      categoria: selCats.join(',') || undefined,
+      etiqueta: selTags.join(',') || undefined,
+      marca: selBrands.join(',') || undefined,
+      ofertas: onlyOffers ? '1' : undefined,
+      local: onlyLocal ? '1' : undefined,
+      min: min ?? undefined,
+      max: max ?? undefined,
+      orden: sort === 'relevancia' ? undefined : sort,
+      page: 1,
+      amountPerPage: SERVER_PAGE,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [argsKey],
+  );
+  const first = useCatalogSearchQuery(args);
+  const { isLoading, error, refetch } = first;
+
+  // Páginas acumuladas del servidor (cada "Ver más" trae la siguiente).
+  const [acc, setAcc] = useState<{ key: string; items: Product[]; total: number; facets: CatalogFacets | null }>({
+    key: '',
+    items: [],
+    total: 0,
+    facets: null,
+  });
+  const [nextPage, setNextPage] = useState(2);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [fetchPage] = useLazyCatalogSearchQuery();
+
+  useEffect(() => {
+    if (!first.data) return;
+    setAcc({ key: argsKey, items: first.data.content, total: first.data.totalElements, facets: first.data.facets });
+    setNextPage(2);
+    setVisible(PAGE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [first.data]);
+
+  const current = acc.key === argsKey ? acc : null;
+  const items = current?.items ?? first.data?.content ?? [];
+  const totalElements = current?.total ?? first.data?.totalElements ?? 0;
+  const facets = current?.facets ?? first.data?.facets ?? null;
+
   const update = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
     for (const [k, v] of Object.entries(patch)) {
@@ -58,79 +105,35 @@ export default function Catalog() {
     update({ [key]: (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]).join(',') });
   };
 
-  // Productos vendibles con su precio de tarjeta precalculado.
-  const items = useMemo(
-    () =>
-      (catalog ?? [])
-        .map((p) => ({ p, info: cardPrice(p) }))
-        .filter((x): x is { p: Product; info: NonNullable<ReturnType<typeof cardPrice>> } => !!x.info),
-    [catalog],
-  );
-
-  const priceCeil = useMemo(() => {
-    const top = Math.max(0, ...items.map((x) => x.info.price));
-    return Math.max(1000, Math.ceil(top / 1000) * 1000);
-  }, [items]);
-
-  const filtered = useMemo(() => {
-    const words = searchWords(q);
-    const passesFilters = ({ p, info }: (typeof items)[number]) => {
-      if (selCats.length && !selCats.includes(slugify(p.Category?.name ?? ''))) return false;
-      const ptags = (p.Tags ?? []).map((t) => slugify(t.name));
-      if (selTags.length && !selTags.every((t) => ptags.includes(t))) return false;
-      // Los productos 100 % locales se muestran como "Productor local", no por su marca
-      if (selBrands.length && (localKind(p) === 'all' || !selBrands.includes(slugify(p.Brand?.name ?? '')))) return false;
-      if (onlyLocal && !localKind(p)) return false;
-      if (min !== null && info.price < min) return false;
-      if (max !== null && info.price > max) return false;
-      if (onlyOffers && !webVariants(p).some((v) => selectOffer(v, p))) return false;
-      return true;
-    };
-    const base = items.filter(passesFilters);
-    const score = (partial: boolean) =>
-      base
-        .map((x) => {
-          const rest = normalize(
-            `${x.p.description ?? ''} ${x.p.Category?.name ?? ''} ${localKind(x.p) === 'all' ? '' : (x.p.Brand?.name ?? '')} ${(x.p.Tags ?? []).map((t) => t.name).join(' ')}${localSearchText(x.p)}`,
-          );
-          return { ...x, score: words.length ? searchScore(normalize(x.p.name), rest, words, partial) : 0 };
-        })
-        .filter((x): x is typeof x & { score: number } => x.score !== null);
-    // Con 3+ palabras y nada que coincida con todas, lo que coincide con todas menos una
-    let out = score(false);
-    if (!out.length && words.length >= 3) out = score(true);
-    const byRelevance = (a: (typeof out)[number], b: (typeof out)[number]) =>
-      a.score - b.score || Number(b.info.hasStock) - Number(a.info.hasStock) || a.p.name.localeCompare(b.p.name, 'es');
-    const sorters: Record<string, typeof byRelevance> = {
-      relevancia: byRelevance,
-      'precio-asc': (a, b) => a.info.price - b.info.price,
-      'precio-desc': (a, b) => b.info.price - a.info.price,
-      nombre: (a, b) => a.p.name.localeCompare(b.p.name, 'es'),
-      nuevos: (a, b) => b.p.id - a.p.id,
-    };
-    return out.sort(sorters[sort] ?? byRelevance).map((x) => x.p);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, q, params]);
-
-  // Conteos por categoría / marca sobre lo vendible.
-  const [catCount, brandCount, localCount] = useMemo(() => {
-    const cats = new Map<string, number>();
-    const brs = new Map<string, number>();
-    let locals = 0;
-    for (const { p } of items) {
-      const c = slugify(p.Category?.name ?? '');
-      cats.set(c, (cats.get(c) ?? 0) + 1);
-      const kind = localKind(p);
-      if (kind) locals++;
-      const b = slugify(p.Brand?.name ?? '');
-      if (b && kind !== 'all') brs.set(b, (brs.get(b) ?? 0) + 1);
-    }
-    return [cats, brs, locals] as const;
-  }, [items]);
+  // Conteos por categoría / marca sobre TODO lo vendible (los calcula el servidor).
+  const [catCount, brandCount] = useMemo(() => {
+    const cats = new Map(Object.entries(facets?.categories ?? {}));
+    const brs = new Map(Object.entries(facets?.brands ?? {}));
+    return [cats, brs] as const;
+  }, [facets]);
+  const localCount = facets?.local ?? 0;
+  const priceCeil = facets?.priceCeil ?? 1000;
 
   useEffect(() => {
     setVisible(PAGE);
   }, [params]);
+
+  const loadMore = async () => {
+    if (visible < items.length) {
+      setVisible((v) => v + PAGE);
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const res = await fetchPage({ ...args, page: nextPage }).unwrap();
+      setAcc((a) => (a.key === argsKey ? { ...a, items: [...a.items, ...res.content] } : a));
+      setNextPage((p) => p + 1);
+    } catch {
+      // Si falla la página siguiente, el botón queda para reintentar.
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const catName = (slug: string) => categories.find((c) => slugify(c.name) === slug)?.name ?? slug;
   const tagName = (slug: string) => tags.find((t) => slugify(t.name) === slug)?.name ?? slug;
@@ -201,14 +204,14 @@ export default function Catalog() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
         <aside className="hidden lg:block">
           <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
-          <p className="mt-3 text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(filtered.length)} resultados`}</p>
+          <p className="mt-3 text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(totalElements)} resultados`}</p>
           <div className="mt-5 border-t border-ink-200">{filters}</div>
         </aside>
 
         <div className="min-w-0">
           <div className="mb-3 lg:hidden">
             <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
-            <p className="mt-1 text-sm text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(filtered.length)} resultados`}</p>
+            <p className="mt-1 text-sm text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(totalElements)} resultados`}</p>
           </div>
 
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -250,7 +253,7 @@ export default function Catalog() {
 
           {error ? (
             <ErrorState message={getErrorMessage(error)} onRetry={refetch} />
-          ) : !isLoading && filtered.length === 0 ? (
+          ) : !isLoading && totalElements === 0 ? (
             <EmptyState
               icon={<SearchX className="size-7" />}
               title="No encontramos productos"
@@ -264,14 +267,14 @@ export default function Catalog() {
             </EmptyState>
           ) : (
             <>
-              <ProductGrid products={filtered.slice(0, visible)} loading={isLoading} count={9} className="md:grid-cols-3 lg:grid-cols-3" />
-              {visible < filtered.length && (
+              <ProductGrid products={items.slice(0, visible)} loading={isLoading} count={9} className="md:grid-cols-3 lg:grid-cols-3" />
+              {(visible < items.length || items.length < totalElements) && (
                 <div className="mt-10 flex flex-col items-center gap-2">
-                  <button onClick={() => setVisible((v) => v + PAGE)} className="btn-outline h-11 rounded-full px-8">
-                    <Plus className="size-4" /> Ver más productos
+                  <button onClick={loadMore} disabled={loadingMore} className="btn-outline h-11 rounded-full px-8 disabled:opacity-60">
+                    <Plus className="size-4" /> {loadingMore ? 'Cargando…' : 'Ver más productos'}
                   </button>
                   <span className="text-xs text-ink-400">
-                    Mostrando {visible} de {filtered.length}
+                    Mostrando {Math.min(visible, items.length)} de {formatNumber(totalElements)}
                   </span>
                 </div>
               )}
@@ -299,7 +302,7 @@ export default function Catalog() {
                 }}
                 className="btn-primary h-12 w-full"
               >
-                Ver {filtered.length} resultados
+                Ver {totalElements} resultados
               </button>
             </div>
           </div>

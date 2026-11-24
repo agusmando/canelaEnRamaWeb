@@ -7,7 +7,7 @@ const DISMISS_KEY = 'cer_announcement_dismissed';
 
 function readDismissed(): string | null {
   try {
-    return sessionStorage.getItem(DISMISS_KEY);
+    return localStorage.getItem(DISMISS_KEY);
   } catch {
     return null;
   }
@@ -15,7 +15,7 @@ function readDismissed(): string | null {
 
 /**
  * Barra de anuncio (`ANNOUNCEMENT_BAR`) arriba del header: muestra el primer banner activo.
- * Se puede cerrar por la sesión (se recuerda qué versión se cerró: si cambia, vuelve a aparecer).
+ * Se puede cerrar de forma permanente (localStorage); si el admin edita el anuncio vuelve a aparecer.
  */
 export function AnnouncementBar() {
   const { data } = useBannersQuery('ANNOUNCEMENT_BAR');
@@ -29,9 +29,9 @@ export function AnnouncementBar() {
   const dismiss = () => {
     setDismissed(version);
     try {
-      sessionStorage.setItem(DISMISS_KEY, version);
+      localStorage.setItem(DISMISS_KEY, version);
     } catch {
-      /* sessionStorage no disponible: se oculta solo hasta recargar */
+      /* storage no disponible: se oculta solo hasta recargar */
     }
   };
 

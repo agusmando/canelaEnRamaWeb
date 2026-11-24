@@ -6,6 +6,8 @@ import type {
   Cart,
   CartLineInput,
   Brand,
+  CatalogResult,
+  CatalogSearchArgs,
   Category,
   Id,
   Order,
@@ -121,6 +123,15 @@ export const shopApi = createApi({
       transformResponse: (raw: Product[] | Paginated<Product>) => (Array.isArray(raw) ? raw : raw.content ?? []),
       providesTags: ['Catalog'],
       keepUnusedDataFor: 900,
+    }),
+
+    /**
+     * Catálogo con búsqueda, filtros, orden y paginación del lado del servidor
+     * (`GET /catalog`): para la página /productos, que ya no baja todo el catálogo.
+     */
+    catalogSearch: build.query<CatalogResult, CatalogSearchArgs>({
+      query: (args) => ({ url: '/catalog', params: args }),
+      providesTags: ['Catalog'],
     }),
 
     product: build.query<Product, Id>({
@@ -426,6 +437,8 @@ export const shopApi = createApi({
 
 export const {
   useCatalogQuery,
+  useCatalogSearchQuery,
+  useLazyCatalogSearchQuery,
   useProductQuery,
   useCategoriesQuery,
   useTagsQuery,

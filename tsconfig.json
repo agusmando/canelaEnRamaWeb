@@ -17,7 +17,6 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"

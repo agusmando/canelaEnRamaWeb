@@ -128,6 +128,46 @@ export interface Product {
   offers?: Offer[];
 }
 
+// ---------------------------------------------------------------- Catálogo buscable
+
+/** Conteos de los filtros sobre todo el catálogo vendible (no solo la página). */
+export interface CatalogFacets {
+  /** slug de categoría → cantidad de productos */
+  categories: Record<string, number>;
+  /** slug de marca → cantidad (los 100 % locales no cuentan por marca) */
+  brands: Record<string, number>;
+  /** productos de productores locales */
+  local: number;
+  /** techo del rango de precios (múltiplo de 1000, mínimo 1000) */
+  priceCeil: number;
+}
+
+export interface CatalogResult {
+  content: Product[];
+  totalElements: number;
+  facets: CatalogFacets;
+}
+
+export interface CatalogSearchArgs {
+  [key: string]: string | number | undefined;
+  /** Búsqueda por texto (tolerante a errores, sin acentos). */
+  q?: string;
+  /** Slugs de categoría, separados por coma (OR). */
+  categoria?: string;
+  /** Slugs de etiqueta, separados por coma (TODAS deben coincidir). */
+  etiqueta?: string;
+  /** Slugs de marca, separados por coma (OR). */
+  marca?: string;
+  ofertas?: string;
+  local?: string;
+  min?: number;
+  max?: number;
+  /** relevancia | precio-asc | precio-desc | nombre | nuevos */
+  orden?: string;
+  page?: number;
+  amountPerPage?: number;
+}
+
 // ---------------------------------------------------------------- Carrito
 
 export interface CartItem {

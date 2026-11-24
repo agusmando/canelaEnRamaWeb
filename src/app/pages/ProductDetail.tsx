@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
-import { BadgePercent, Check, Clock, ImageOff, PackageCheck, PackageX, Share2, ShoppingCart, Sprout, Store, Tag as TagIcon, Truck } from 'lucide-react';
+import { BadgePercent, Check, ChevronLeft, ChevronRight, Clock, ImageOff, PackageCheck, PackageX, Share2, ShoppingCart, Sprout, Store, Tag as TagIcon, Truck, X } from 'lucide-react';
 import { useAddToCartMutation, useCatalogQuery, useProductQuery } from '../api/shopApi';
 import type { Product, ProductVariant } from '../api/types';
 import { getErrorMessage } from '../api/client';
@@ -37,7 +37,7 @@ import {
 import { cn, formatCurrency } from '../lib/utils';
 import { useSeo } from '../hooks/useSeo';
 import { productSeo } from '../lib/seo';
-import { cld, cldImg } from '../lib/cloudinary';
+import { cld, cldImg, cldSrcSet } from '../lib/cloudinary';
 
 /** Venta suelta por peso: mínimo y paso en gramos. */
 const LOOSE_MIN_G = 100;
@@ -354,12 +354,28 @@ function ShareButton({ name }: { name: string }) {
 
 function Gallery({ images, name, badge }: { images: string[]; name: string; badge: string | null }) {
   const [i, setI] = useState(0);
+  const [zoom, setZoom] = useState(false);
   useEffect(() => {
     setI(0);
+    setZoom(false);
   }, [images]);
+  // Lightbox: Escape cierra y se bloquea el scroll del fondo.
+  useEffect(() => {
+    if (!zoom) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setZoom(false);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', esc);
+    };
+  }, [zoom]);
   const current = images[i];
+  const step = (d: number) => setI((x) => (x + d + images.length) % images.length);
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-5">
+    <>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:gap-5">
       {images.length > 1 && (
         <div className="no-scrollbar flex min-w-0 gap-3 overflow-x-auto sm:w-[90px] sm:shrink-0 sm:flex-col">
           {images.map((src, idx) => (
@@ -377,17 +393,24 @@ function Gallery({ images, name, badge }: { images: string[]; name: string; badg
       )}
       <div className="relative aspect-square w-full min-w-0 overflow-hidden rounded-lg bg-ink-100">
         {current ? (
-          <img
-            {...cldImg(current, { widths: [480, 720, 960, 1200], w: 1200, aspect: 1, sizes: '(min-width: 1024px) 600px, 100vw' })}
-            alt={name}
-            width={1200}
-            height={1200}
-            // Imagen principal del detalle: es el LCP de la página.
-            {...(i === 0 ? { fetchpriority: 'high' } : {})}
-            decoding="async"
-            className="size-full object-cover animate-fade-in"
-            key={current}
-          />
+          <button
+            type="button"
+            onClick={() => setZoom(true)}
+            aria-label={`Ampliar imagen de ${name}`}
+            className="block size-full cursor-zoom-in"
+          >
+            <img
+              {...cldImg(current, { widths: [480, 720, 960, 1200], w: 1200, aspect: 1, sizes: '(min-width: 1024px) 600px, 100vw' })}
+              alt={name}
+              width={1200}
+              height={1200}
+              // Imagen principal del detalle: es el LCP de la página.
+              {...(i === 0 ? { fetchpriority: 'high' } : {})}
+              decoding="async"
+              className="size-full object-cover animate-fade-in"
+              key={current}
+            />
+          </button>
         ) : (
           <div className="flex size-full items-center justify-center text-ink-300">
             <ImageOff className="size-16" strokeWidth={1} />
@@ -395,7 +418,66 @@ function Gallery({ images, name, badge }: { images: string[]; name: string; badg
         )}
         {badge && <span className="absolute top-3 left-3 rounded-md bg-leaf-500 px-2.5 py-1 text-sm font-bold text-white shadow">{badge}</span>}
       </div>
-    </div>
+      </div>
+
+      {zoom && current && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Imagen ampliada de ${name}`}
+          onClick={() => setZoom(false)}
+        >
+          <button
+            type="button"
+            aria-label="Cerrar imagen"
+            onClick={() => setZoom(false)}
+            className="absolute top-4 right-4 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+          >
+            <X className="size-5" />
+          </button>
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Imagen anterior"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(-1);
+                }}
+                className="absolute left-3 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:left-6"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Imagen siguiente"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(1);
+                }}
+                className="absolute right-3 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 sm:right-6"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+            </>
+          )}
+          <img
+            src={cld(current, { w: 1600 })}
+            srcSet={cldSrcSet(current, [800, 1200, 1600, 2000])}
+            sizes="100vw"
+            alt={name}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full rounded-md object-contain"
+          />
+          {images.length > 1 && (
+            <p className="absolute bottom-4 text-sm text-white/70 tabular-nums">
+              {i + 1} / {images.length}
+            </p>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
