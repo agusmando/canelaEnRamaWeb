@@ -87,7 +87,6 @@ export function GoogleReviewCard({ review, className }: { review: GoogleReview; 
           {expanded ? 'Ver menos' : 'Ver más'}
         </button>
       )}
-      {review.relativeTime && <figcaption className="mt-auto pt-3 text-xs text-ink-400">{review.relativeTime}</figcaption>}
     </figure>
   );
 }

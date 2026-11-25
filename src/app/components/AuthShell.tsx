@@ -11,7 +11,7 @@ import { formatRating } from './Stars';
  * `data/googleReviews.ts`, se usan esos. Si no, `GET /google-review`.
  * Sin reseñas se muestra solo el link a Google.
  */
-const ROTATE_MS = 5000;
+const ROTATE_MS = 4000;
 
 interface ShellReview {
   id: number;
