@@ -7,7 +7,7 @@ import { getErrorMessage } from '../api/client';
 import { BannerStrip } from '../components/BannerStrip';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ProductGrid } from '../components/ProductCard';
-import { EmptyState, ErrorState } from '../components/States';
+import { EmptyState, ErrorState, Spinner } from '../components/States';
 import { LOCAL_LABEL, slugify } from '../lib/shop';
 import { cn, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -66,7 +66,10 @@ export default function Catalog() {
     [argsKey],
   );
   const first = useCatalogSearchQuery(args);
-  const { isLoading, error, refetch } = first;
+  const { isLoading, isFetching, error, refetch } = first;
+  // isFetching cubre tanto la carga inicial (isLoading) como refetches con datos previos
+  // (volver a un filtro ya visitado, invalidaciones). Sirve para mostrar el indicador.
+  const refreshing = isFetching && !isLoading;
 
   // Páginas acumuladas del servidor (cada "Ver más" trae la siguiente).
   const [acc, setAcc] = useState<{ key: string; items: Product[]; total: number; facets: CatalogFacets | null }>({
@@ -204,14 +207,30 @@ export default function Catalog() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10">
         <aside className="hidden lg:block">
           <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
-          <p className="mt-3 text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(totalElements)} resultados`}</p>
+          <p className="mt-3 flex items-center gap-2 text-ink-500">
+            {isFetching ? (
+              <>
+                <Spinner className="size-4" /> Buscando productos…
+              </>
+            ) : (
+              `${formatNumber(totalElements)} resultados`
+            )}
+          </p>
           <div className="mt-5 border-t border-ink-200">{filters}</div>
         </aside>
 
         <div className="min-w-0">
           <div className="mb-3 lg:hidden">
             <h1 className="text-2xl font-semibold break-words text-ink-800">{title}</h1>
-            <p className="mt-1 text-sm text-ink-500">{isLoading ? 'Cargando…' : `${formatNumber(totalElements)} resultados`}</p>
+            <p className="mt-1 flex items-center gap-2 text-sm text-ink-500">
+              {isFetching ? (
+                <>
+                  <Spinner className="size-4" /> Buscando productos…
+                </>
+              ) : (
+                `${formatNumber(totalElements)} resultados`
+              )}
+            </p>
           </div>
 
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -267,7 +286,21 @@ export default function Catalog() {
             </EmptyState>
           ) : (
             <>
-              <ProductGrid products={items.slice(0, visible)} loading={isLoading} count={9} className="md:grid-cols-3 lg:grid-cols-3" />
+              <div className="relative" aria-busy={refreshing}>
+                <ProductGrid
+                  products={items.slice(0, visible)}
+                  loading={isLoading}
+                  count={9}
+                  className={cn('md:grid-cols-3 lg:grid-cols-3 transition-opacity', refreshing && 'opacity-60')}
+                />
+                {refreshing && (
+                  <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-center">
+                    <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-ink-600 shadow-card ring-1 ring-ink-200 backdrop-blur">
+                      <Spinner className="size-4" /> Actualizando resultados…
+                    </span>
+                  </div>
+                )}
+              </div>
               {(visible < items.length || items.length < totalElements) && (
                 <div className="mt-10 flex flex-col items-center gap-2">
                   <button onClick={loadMore} disabled={loadingMore} className="btn-outline h-11 rounded-full px-8 disabled:opacity-60">
@@ -302,7 +335,13 @@ export default function Catalog() {
                 }}
                 className="btn-primary h-12 w-full"
               >
-                Ver {totalElements} resultados
+                {isFetching ? (
+                  <>
+                    <Spinner className="size-4" /> Buscando…
+                  </>
+                ) : (
+                  `Ver ${totalElements} resultados`
+                )}
               </button>
             </div>
           </div>

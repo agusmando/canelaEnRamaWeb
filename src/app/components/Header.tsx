@@ -14,6 +14,7 @@ import {
   Percent,
   ShoppingBag,
   ShoppingCart,
+  Star,
   Store,
   Truck,
   User,
@@ -22,12 +23,16 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCartQuery, useCategoriesQuery } from '../api/shopApi';
+import { usePublicGoogleReviews } from '../data/googleReviews';
+import { CONTACT } from '../lib/contact';
 import { useAppDispatch, useAppSelector, useCartKey } from '../store';
 import { signOut } from '../store/authSlice';
 import { slugify } from '../lib/shop';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { CategoryIcon } from './CategoryIcon';
+import { GoogleIcon } from './GoogleButton';
 import { Logo } from './Logo';
+import { formatRating } from './Stars';
 import { SearchBox } from './SearchBox';
 
 const NAV: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -67,6 +72,7 @@ export function Header() {
           <Link to="/ofertas" className="hidden items-center gap-1.5 font-medium hover:underline md:inline-flex">
             <Percent className="size-3.5 text-leaf-500" /> Ofertas de la semana
           </Link>
+          <RatingBadge />
         </p>
       </div>
 
@@ -114,6 +120,27 @@ export function Header() {
 
       <MobileMenu open={mobileOpen} onClose={closeMobile} />
     </header>
+  );
+}
+
+/** Puntaje de Google Maps en la barra superior: credibilidad visible en todas las páginas. */
+function RatingBadge() {
+  const { data } = usePublicGoogleReviews();
+  const place = data?.place;
+  if (!place?.rating || !place.userRatingCount) return null;
+  return (
+    <a
+      href={CONTACT.mapsUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 font-medium hover:underline"
+      aria-label={`${formatRating(place.rating)} estrellas en Google, ${formatNumber(place.userRatingCount)} reseñas`}
+    >
+      <GoogleIcon className="size-3.5" />
+      <Star className="size-3 fill-brand-300 text-brand-300" />
+      <span>{formatRating(place.rating)}</span>
+      <span className="hidden text-white/60 sm:inline">· {formatNumber(place.userRatingCount)} reseñas</span>
+    </a>
   );
 }
 

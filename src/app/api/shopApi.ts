@@ -9,6 +9,7 @@ import type {
   CatalogResult,
   CatalogSearchArgs,
   Category,
+  CouponPreview,
   Id,
   Order,
   PaymentConfig,
@@ -262,10 +263,19 @@ export const shopApi = createApi({
     // ------------------------------------------------------------ Órdenes
 
     /** Con DELIVERY el servidor vuelve a cotizar el envío (es quien define el precio). */
-    checkout: build.mutation<Order, { paymentType: PaymentType; shippingMethod: ShipmentMethod }>({
-      query: ({ paymentType, shippingMethod }) => ({ url: '/order', method: 'POST', data: { fromCart: true, paymentType, shippingMethod } }),
+    checkout: build.mutation<Order, { paymentType: PaymentType; shippingMethod: ShipmentMethod; discountCode?: string }>({
+      query: ({ paymentType, shippingMethod, discountCode }) => ({
+        url: '/order',
+        method: 'POST',
+        data: { fromCart: true, paymentType, shippingMethod, ...(discountCode ? { discountCode } : {}) },
+      }),
       // El checkout descuenta stock: refrescamos catálogo, carrito y pedidos.
       invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
+    }),
+
+    /** Vista previa de un cupón sobre el subtotal de productos del carrito. */
+    validateCoupon: build.mutation<CouponPreview, { code: string; subtotal: number }>({
+      query: ({ code, subtotal }) => ({ url: '/discount-code/validate', method: 'POST', data: { code, subtotal } }),
     }),
 
     paymentConfig: build.query<PaymentConfig, void>({
@@ -447,6 +457,7 @@ export const {
   useAddToCartMutation,
   useUpdateCartMutation,
   useCheckoutMutation,
+  useValidateCouponMutation,
   usePaymentConfigQuery,
   useCreatePaymentPreferenceMutation,
   useSyncPaymentMutation,

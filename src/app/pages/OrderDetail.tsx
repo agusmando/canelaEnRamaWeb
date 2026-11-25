@@ -121,7 +121,7 @@ export default function OrderDetail() {
       </Link>
 
       {isMp && (returnedFromMp || canPayOnline(order)) && order.status !== 'CANCELLED' && (
-        <PaymentBanner order={order} syncing={syncing} redirecting={redirecting} onPay={payOnline} />
+        <PaymentBanner order={order} syncing={syncing} redirecting={redirecting} returned={!!returnedFromMp} onPay={payOnline} />
       )}
 
       {isNew && !isMp && (
@@ -264,7 +264,7 @@ export default function OrderDetail() {
                     ) : (
                       <p className="font-medium break-words text-ink-800">{it.productNameSnapshot}</p>
                     )}
-                    <p className="text-sm text-ink-500">
+                    <p className="break-words text-sm text-ink-500">
                       {it.variantNameSnapshot} · {describeQty(it.quantity, it.selectedBulkOption, it.productVariant?.contentMeasure)}
                     </p>
                     {ITEM_STATUS[it.status] && <p className="mt-0.5 text-xs font-medium text-amber-700">{ITEM_STATUS[it.status]}</p>}
@@ -290,24 +290,30 @@ export default function OrderDetail() {
         </ul>
         <dl className="space-y-2 border-t border-ink-200 p-4 text-sm sm:p-5">
           {discount > 0 && (
-            <div className="flex justify-between text-leaf-600">
-              <dt>Descuentos aplicados</dt>
-              <dd>−{formatCurrency(discount)}</dd>
+            <div className="flex justify-between gap-3 text-leaf-600">
+              <dt className="min-w-0">Descuentos aplicados</dt>
+              <dd className="shrink-0 tabular-nums">−{formatCurrency(discount)}</dd>
             </div>
           )}
-          <div className="flex justify-between text-ink-600">
-            <dt>Productos</dt>
-            <dd className="tabular-nums">{formatCurrency(order.totalPrice)}</dd>
+          {(order.couponDiscount ?? 0) > 0 && order.couponCode && (
+            <div className="flex justify-between gap-3 text-leaf-600">
+              <dt className="min-w-0">Cupón {order.couponCode}</dt>
+              <dd className="shrink-0 tabular-nums">−{formatCurrency(order.couponDiscount!)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between gap-3 text-ink-600">
+            <dt className="min-w-0">Productos</dt>
+            <dd className="shrink-0 tabular-nums">{formatCurrency(order.totalPrice)}</dd>
           </div>
-          <div className="flex justify-between text-ink-600">
-            <dt>{isDelivery ? 'Envío a domicilio' : 'Retiro en el local'}</dt>
-            <dd className={cn('tabular-nums', shippingCost === 0 && 'text-leaf-600')}>
+          <div className="flex justify-between gap-3 text-ink-600">
+            <dt className="min-w-0">{isDelivery ? 'Envío a domicilio' : 'Retiro en el local'}</dt>
+            <dd className={cn('shrink-0 tabular-nums', shippingCost === 0 && 'text-leaf-600')}>
               {shippingCost > 0 ? formatCurrency(shippingCost) : isDelivery ? 'Gratis' : 'Sin cargo'}
             </dd>
           </div>
-          <div className="flex items-center justify-between border-t border-ink-100 pt-2">
-            <dt className="text-base font-semibold text-ink-800">Total</dt>
-            <dd className="text-xl font-bold text-ink-800 tabular-nums">{formatCurrency(orderTotal(order))}</dd>
+          <div className="flex items-center justify-between gap-3 border-t border-ink-100 pt-2">
+            <dt className="min-w-0 text-base font-semibold text-ink-800">Total</dt>
+            <dd className="shrink-0 text-xl font-bold text-ink-800 tabular-nums">{formatCurrency(orderTotal(order))}</dd>
           </div>
           {(order.refunds ?? []).map((r) => (
             <div key={r.id} className="flex justify-between gap-3 text-leaf-600">
@@ -328,7 +334,7 @@ export default function OrderDetail() {
 }
 
 /** Resultado del pago con Mercado Pago y botón para pagar / reintentar. */
-function PaymentBanner({ order, syncing, redirecting, onPay }: { order: Order; syncing: boolean; redirecting: boolean; onPay: () => void }) {
+function PaymentBanner({ order, syncing, redirecting, returned, onPay }: { order: Order; syncing: boolean; redirecting: boolean; returned: boolean; onPay: () => void }) {
   const status = order.paymentStatus ?? 'PENDING';
   const payButton = canPayOnline(order) && (
     <ActionButton
@@ -389,8 +395,14 @@ function PaymentBanner({ order, syncing, redirecting, onPay }: { order: Order; s
     <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:gap-4 sm:p-5">
       <Wallet className="size-8 shrink-0 text-amber-600" />
       <div>
-        <p className="text-lg font-semibold text-ink-800">Tu pedido está reservado: falta el pago</p>
-        <p className="mt-1 text-ink-600">Completá el pago con Mercado Pago para que empecemos a prepararlo. Si no se paga a tiempo, el pedido se cancela automáticamente.</p>
+        <p className="text-lg font-semibold text-ink-800">Tu orden está pendiente de pago</p>
+        <p className="mt-1 text-ink-600">
+          Mercado Pago todavía no confirmó el pago{returned ? ' (volviste sin completarlo)' : ''}. Podés verlo en{' '}
+          <Link to="/mi-cuenta/pedidos" className="font-medium text-amber-800 underline underline-offset-2">
+            Mis pedidos
+          </Link>{' '}
+          y completarlo cuando quieras. Si no se paga a tiempo, el pedido se cancela automáticamente.
+        </p>
         {payButton}
       </div>
     </div>

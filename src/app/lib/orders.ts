@@ -54,6 +54,9 @@ export const canPayOnline = (o: Pick<Order, 'paymentType' | 'status' | 'paymentS
 
 // Pedidos viejos pueden tener DEBIT/CREDIT: ya no se ofrecen, pero se siguen mostrando.
 const LEGACY_PAYMENT_LABEL: Record<string, string> = { DEBIT: 'Débito', CREDIT: 'Crédito', TRANSFER: 'Transferencia' };
+/** Clave de sessionStorage donde /ofertas deja el cupón para precargarlo en el carrito. */
+export const COUPON_STORAGE_KEY = 'checkout.coupon';
+
 export const paymentLabel = (p: string) => PAYMENT_OPTIONS.find((o) => o.value === p)?.label ?? LEGACY_PAYMENT_LABEL[p] ?? p;
 
 /** "2 × 500g" o "300 g". */
@@ -70,5 +73,6 @@ export function itemTotal(it: OrderItem) {
 
 export const orderNumber = (id: number) => `#${String(id).padStart(5, '0')}`;
 
-/** Lo que paga el cliente: `totalPrice` es solo productos, el envío va aparte. */
-export const orderTotal = (o: Pick<Order, 'totalPrice' | 'shippingCost'>) => (Number(o.totalPrice) || 0) + (Number(o.shippingCost) || 0);
+/** Lo que paga el cliente: `totalPrice` es solo productos, el cupón lo rebaja y el envío va aparte. */
+export const orderTotal = (o: Pick<Order, 'totalPrice' | 'shippingCost' | 'couponDiscount'>) =>
+  Math.max(0, (Number(o.totalPrice) || 0) - (Number(o.couponDiscount) || 0)) + (Number(o.shippingCost) || 0);

@@ -63,7 +63,7 @@ export function ShipmentTimeline({ events }: { events: ShipmentEvent[] }) {
                 latest ? cn(s?.dot ?? 'bg-brand-500', 'ring-brand-100') : 'bg-ink-300 ring-white',
               )}
             />
-            <div className="min-w-0">
+            <div className="min-w-0 break-words">
               <p className={cn('font-medium', latest ? 'text-ink-800' : 'text-ink-600')}>{s?.label ?? e.status}</p>
               {e.description && <p className="mt-0.5 text-sm text-ink-600">{e.description}</p>}
               <p className="mt-0.5 text-xs text-ink-500">
@@ -101,7 +101,7 @@ export function ShipmentDetails({ data, title = 'Seguimiento del envío', headin
       </div>
 
       <div className="grid gap-6 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <dl className="space-y-4 text-sm">
+        <dl className="min-w-0 space-y-4 text-sm">
           <Info label="Método">{SHIPMENT_METHOD[data.method] ?? data.method}</Info>
           <Info label="Código de seguimiento">
             <span className="inline-flex max-w-full items-center gap-2">
@@ -164,7 +164,7 @@ export function ShipmentDetails({ data, title = 'Seguimiento del envío', headin
           )}
         </dl>
 
-        <div>
+        <div className="min-w-0">
           <h3 className="mb-4 text-sm font-semibold tracking-wide text-ink-500 uppercase">Movimientos</h3>
           <ShipmentTimeline events={data.events ?? []} />
         </div>

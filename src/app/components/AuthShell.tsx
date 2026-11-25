@@ -1,17 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Star } from 'lucide-react';
-import { useGoogleReviewsQuery } from '../api/shopApi';
+import { usePublicGoogleReviews } from '../data/googleReviews';
 import { CONTACT } from '../lib/contact';
 import { cn, formatNumber } from '../lib/utils';
 import { GoogleIcon } from './GoogleButton';
 import { formatRating } from './Stars';
 
 /**
- * Reseñas reales de Google junto al login/registro (`GET /google-review`:
- * puntaje del local + reseñas destacadas en el dashboard). No hay datos
- * inventados: si todavía no hay reseñas se muestra solo el link a Google.
+ * Reseñas de Google junto al login/registro. Si hay textos en
+ * `data/googleReviews.ts`, se usan esos. Si no, `GET /google-review`.
+ * Sin reseñas se muestra solo el link a Google.
  */
-const ROTATE_MS = 7000;
+const ROTATE_MS = 5000;
 
 interface ShellReview {
   id: number;
@@ -75,7 +75,7 @@ function GhostCard({ review, side }: { review: ShellReview; side: 'left' | 'righ
 }
 
 function useShellReviews() {
-  const { data, isLoading } = useGoogleReviewsQuery();
+  const { data, isLoading } = usePublicGoogleReviews();
   const place = data?.place;
   const reviews: ShellReview[] = (data?.reviews ?? [])
     .filter((r) => r.text?.trim() && r.rating >= 4)

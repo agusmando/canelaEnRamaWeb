@@ -271,6 +271,21 @@ export interface Order {
   shippingProvider?: string | null;
   /** Departamento de destino. */
   shippingZone?: string | null;
+  /** Cupón aplicado en el checkout (descuenta del subtotal de productos). */
+  couponCode?: string | null;
+  couponDiscount?: number;
+  discountCodeId?: number | null;
+}
+
+/** Respuesta de POST /discount-code/validate. */
+export interface CouponPreview {
+  code: string;
+  discountType: 'PERCENTAGE' | 'FIXED' | string;
+  discountValue: number;
+  /** Monto final del descuento sobre el subtotal enviado. */
+  discount: number;
+  minOrderAmount: number;
+  finishTime: ISODate;
 }
 
 // ---------------------------------------------------------------- Envíos

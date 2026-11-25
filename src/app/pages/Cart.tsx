@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Clock, CircleCheck, CreditCard, ImageOff, Landmark, Lock, MapPin, ShoppingBag, Store, Trash2, Truck, Wallet, X, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Clock, CircleCheck, CreditCard, ImageOff, Landmark, Lock, MapPin, ShoppingBag, Store, TicketPercent, Trash2, Truck, Wallet, X, type LucideIcon } from 'lucide-react';
 import {
   useCartQuery,
   useCheckoutMutation,
@@ -10,8 +10,9 @@ import {
   useShippingConfigQuery,
   useShippingQuoteQuery,
   useUpdateCartMutation,
+  useValidateCouponMutation,
 } from '../api/shopApi';
-import type { CartItem, PaymentType, ShipmentMethod, ShippingConfig, ShippingQuote, UserAddress } from '../api/types';
+import type { CartItem, CouponPreview, PaymentType, ShipmentMethod, ShippingConfig, ShippingQuote, UserAddress } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { QtyStepper } from '../components/QtyStepper';
@@ -19,7 +20,7 @@ import { EmptyState, ErrorState, PageLoader, Spinner } from '../components/State
 import { AddressModal } from '../components/AddressForm';
 import { ActionButton } from '../components/ActionButton';
 import { useAppSelector, useCartKey } from '../store';
-import { PAYMENT_OPTIONS } from '../lib/orders';
+import { COUPON_STORAGE_KEY, PAYMENT_OPTIONS } from '../lib/orders';
 import { SHIPMENT_METHOD, addressArea, addressLine, etaLabel } from '../lib/shipments';
 import { packLabel, stockUnit } from '../lib/shop';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
@@ -36,6 +37,24 @@ const PAYMENT_ICONS: Record<PaymentType, LucideIcon> = {
 };
 
 const METHOD_KEY = 'checkout.shippingMethod';
+const COUPON_KEY = COUPON_STORAGE_KEY;
+
+function readCoupon(): string {
+  try {
+    return sessionStorage.getItem(COUPON_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function storeCoupon(code: string | null) {
+  try {
+    if (code) sessionStorage.setItem(COUPON_KEY, code);
+    else sessionStorage.removeItem(COUPON_KEY);
+  } catch {
+    /* sin storage: el cupón solo dura la sesión */
+  }
+}
 
 function readMethod(): ShipmentMethod {
   try {
@@ -90,6 +109,77 @@ export default function Cart() {
   const addressQuery = useMyAddressQuery(undefined, { skip: !authed || !delivery });
   const address = addressQuery.data;
   const productsTotal = cart?.summary.total ?? 0;
+
+  // ---- Cupón de descuento (se valida contra el subtotal de productos)
+  const [couponInput, setCouponInput] = useState(readCoupon);
+  const [coupon, setCoupon] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [validateCoupon, { isLoading: validatingCoupon }] = useValidateCouponMutation();
+  const couponDiscount = coupon?.discount ?? 0;
+
+  const applyCoupon = useCallback(
+    async (raw?: string) => {
+      const code = (raw ?? couponInput).trim();
+      if (!code) {
+        setCoupon(null);
+        setCouponError(null);
+        storeCoupon(null);
+        return;
+      }
+      setCouponError(null);
+      try {
+        const preview = await validateCoupon({ code, subtotal: productsTotal }).unwrap();
+        setCoupon(preview);
+        setCouponInput(preview.code);
+        storeCoupon(preview.code);
+      } catch (e) {
+        setCoupon(null);
+        storeCoupon(null);
+        setCouponError(getErrorMessage(e));
+      }
+    },
+    [couponInput, productsTotal, validateCoupon],
+  );
+
+  const clearCoupon = () => {
+    setCoupon(null);
+    setCouponError(null);
+    setCouponInput('');
+    storeCoupon(null);
+  };
+
+  // Si el carrito cambia después de aplicar el cupón, se revalida el monto.
+  const appliedCode = coupon?.code;
+  useEffect(() => {
+    if (!appliedCode || !(productsTotal > 0)) return;
+    let alive = true;
+    validateCoupon({ code: appliedCode, subtotal: productsTotal })
+      .unwrap()
+      .then((p) => {
+        if (alive) setCoupon(p);
+      })
+      .catch(() => {
+        if (alive) {
+          setCoupon(null);
+          storeCoupon(null);
+          setCouponError('El cupón ya no se puede aplicar a este carrito.');
+        }
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productsTotal, appliedCode]);
+
+  // Cupón precargado (p. ej. desde /ofertas): se valida apenas hay carrito.
+  const couponInit = useRef(false);
+  useEffect(() => {
+    if (couponInit.current || !couponInput.trim() || !(productsTotal > 0)) return;
+    couponInit.current = true;
+    applyCoupon(couponInput);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponInput, productsTotal]);
+
   const quoteQuery = useShippingQuoteQuery(productsTotal, { skip: !authed || !delivery || !address || !cart?.items.length });
   // `currentData`: solo la cotización del total actual (no la del total anterior).
   const quote = quoteQuery.currentData;
@@ -113,7 +203,7 @@ export default function Cart() {
   const finish = async () => {
     try {
       if (!payment) return;
-      const order = await checkout({ paymentType: payment, shippingMethod }).unwrap();
+      const order = await checkout({ paymentType: payment, shippingMethod, ...(coupon ? { discountCode: coupon.code } : {}) }).unwrap();
       if (payment === 'MERCADOPAGO') {
         try {
           const pref = await createPreference(order.id).unwrap();
@@ -268,6 +358,12 @@ export default function Cart() {
                     {(cart?.summary.discount ?? 0) > 0 ? `−${formatCurrency(cart?.summary.discount)}` : formatCurrency(0)}
                   </dd>
                 </div>
+                {coupon && couponDiscount > 0 && (
+                  <div className="flex justify-between text-leaf-600">
+                    <dt>Cupón {coupon.code}</dt>
+                    <dd className="tabular-nums">−{formatCurrency(couponDiscount)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4 text-ink-400">
                   <dt>Envío</dt>
                   <dd className={cn('tabular-nums', shippingCost === 0 && 'text-leaf-600')}>
@@ -277,7 +373,9 @@ export default function Cart() {
                 <div className="flex items-center justify-between border-t border-ink-200 pt-5">
                   <dt className="font-semibold text-ink-800">Total</dt>
                   <dd className="text-right">
-                    <span className="block text-2xl font-bold text-ink-800 tabular-nums">{formatCurrency(productsTotal + (shippingCost ?? 0))}</span>
+                    <span className="block text-2xl font-bold text-ink-800 tabular-nums">
+                      {formatCurrency(Math.max(0, productsTotal - couponDiscount) + (shippingCost ?? 0))}
+                    </span>
                     {shippingCost === null && <span className="block text-xs text-ink-500">+ envío</span>}
                   </dd>
                 </div>
@@ -285,6 +383,47 @@ export default function Cart() {
               <p aria-live="polite" className={cn('mt-2 flex items-center justify-end gap-1.5 text-xs text-ink-500', !syncing && 'invisible')}>
                 <Spinner className="size-3.5" /> Actualizando precios…
               </p>
+
+              <div className="mt-5 rounded-lg border border-dashed border-ink-200 p-3">
+                {coupon ? (
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-leaf-700">
+                      <TicketPercent className="size-4 shrink-0" />
+                      <span className="truncate">
+                        Cupón {coupon.code} · −{formatCurrency(couponDiscount)}
+                      </span>
+                    </span>
+                    <button type="button" onClick={clearCoupon} className="btn-ghost h-8 shrink-0 px-2 text-xs text-ink-500">
+                      <X className="size-3.5" /> Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      applyCoupon();
+                    }}
+                  >
+                    <input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Código de descuento"
+                      aria-label="Código de descuento"
+                      className="field h-10 min-w-0 flex-1 px-3 text-sm uppercase"
+                      autoComplete="off"
+                    />
+                    <button type="submit" disabled={validatingCoupon || !couponInput.trim()} className="btn-secondary h-10 shrink-0 px-4 text-sm">
+                      {validatingCoupon ? <Spinner className="size-4" /> : 'Aplicar'}
+                    </button>
+                  </form>
+                )}
+                {couponError ? (
+                  <p className="mt-2 text-xs text-red-600">{couponError}</p>
+                ) : !coupon ? (
+                  <p className="mt-2 text-xs text-ink-400">¿Tenés un código? Ingresalo acá y se descuenta del total.</p>
+                ) : null}
+              </div>
 
               {authStatus === 'authenticated' ? (
                 <ActionButton

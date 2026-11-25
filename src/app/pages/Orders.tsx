@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ChevronLeft, ChevronRight, ChevronRight as Chevron, Package } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronRight as Chevron, Package, Wallet } from 'lucide-react';
 import { useMyOrdersQuery } from '../api/shopApi';
 import type { Order } from '../api/types';
 import { getErrorMessage } from '../api/client';
@@ -48,12 +48,12 @@ export function OrderRow({ order }: { order: Order }) {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-ink-500">
+            <p className="mt-1 break-words text-sm text-ink-500">
               {formatDateTime(order.createdAt)} · {count} producto{count === 1 ? '' : 's'} · {paymentLabel(order.paymentType)}
               {order.shippingMethod === 'DELIVERY' && <> · {SHIPMENT_METHOD.DELIVERY}</>}
             </p>
           </div>
-          <span className="flex flex-wrap items-baseline gap-x-2 sm:shrink-0 sm:flex-col sm:items-end sm:text-right">
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 sm:shrink-0 sm:flex-col sm:items-end sm:text-right">
             <span className="text-base font-semibold whitespace-nowrap text-ink-800 tabular-nums sm:text-lg">{formatCurrency(orderTotal(order))}</span>
             {saved > 0 && <span className="text-xs font-medium whitespace-nowrap text-leaf-600">Ahorraste {formatCurrency(saved)}</span>}
           </span>
@@ -68,6 +68,7 @@ export default function Orders() {
   useDocumentTitle('Mis pedidos', { noindex: true });
   const [page, setPage] = useState(1);
   const { data, isLoading, isFetching, error, refetch } = useMyOrdersQuery({ page });
+  const unpaidCount = (data?.content ?? []).filter(canPayOnline).length;
 
   return (
     <section>
@@ -92,6 +93,15 @@ export default function Orders() {
         />
       ) : (
         <>
+          {unpaidCount > 0 && (
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <Wallet className="mt-0.5 size-5 shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-800">
+                Tenés {unpaidCount === 1 ? 'un pedido pendiente de pago' : `${unpaidCount} pedidos pendientes de pago`}. Abrí el pedido para
+                completarlo con Mercado Pago.
+              </p>
+            </div>
+          )}
           <ul className={cn('space-y-3', isFetching && 'opacity-70')}>
             {data.content.map((o) => (
               <OrderRow key={o.id} order={o} />

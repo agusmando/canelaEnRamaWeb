@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
-import { useGoogleReviewsQuery } from '../api/shopApi';
+import { usePublicGoogleReviews } from '../data/googleReviews';
 import type { GoogleReview } from '../api/types';
 import { CONTACT } from '../lib/contact';
 import { cn, formatNumber } from '../lib/utils';
@@ -8,13 +8,16 @@ import { GoogleIcon } from './GoogleButton';
 import { SectionHeader } from './SectionHeader';
 import { Stars, formatRating } from './Stars';
 
-const MAX_REVIEWS = 6;
-const CLAMP_CHARS = 220;
+const MAX_REVIEWS = 3;
+const CLAMP_CHARS = 180;
 
 /** "Lo que dicen nuestros clientes": puntaje del local + reseñas destacadas de Google. Se oculta si no hay reseñas. */
 export function GoogleReviewsSection() {
-  const { data } = useGoogleReviewsQuery();
-  const reviews = (data?.reviews ?? []).filter((r) => r.text?.trim()).slice(0, MAX_REVIEWS);
+  const { data } = usePublicGoogleReviews();
+  const reviews = (data?.reviews ?? [])
+    .filter((r) => r.text?.trim())
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, MAX_REVIEWS);
   if (!reviews.length) return null;
   const place = data?.place;
   const mapsUrl = CONTACT.mapsUrl;
@@ -51,7 +54,7 @@ export function GoogleReviewsSection() {
         </div>
       </div>
 
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-4 sm:grid-cols-3">
         {reviews.map((r) => (
           <li key={r.id}>
             <GoogleReviewCard review={r} />
@@ -66,61 +69,25 @@ export function GoogleReviewCard({ review, className }: { review: GoogleReview; 
   const [expanded, setExpanded] = useState(false);
   const text = review.text?.trim() ?? '';
   const long = text.length > CLAMP_CHARS;
-  const author = review.authorUrl ? (
-    <a href={review.authorUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-      {review.authorName}
-    </a>
-  ) : (
-    review.authorName
-  );
 
   return (
-    <figure className={cn('flex h-full flex-col rounded-xl border border-ink-200 bg-white p-5 shadow-card', className)}>
+    <figure className={cn('flex h-full flex-col rounded-xl border border-ink-200 bg-white p-4 shadow-card', className)}>
       <div className="flex items-center justify-between gap-3">
-        <Stars value={review.rating} className="text-lg" />
-        <GoogleIcon className="size-5" />
+        <Stars value={review.rating} className="text-base" />
+        <GoogleIcon className="size-4" />
       </div>
-      <blockquote className={cn('mt-3 text-[15px] leading-relaxed whitespace-pre-line text-ink-700', long && !expanded && 'line-clamp-5')}>{text}</blockquote>
+      <blockquote className={cn('mt-2.5 text-sm leading-relaxed whitespace-pre-line text-ink-700', long && !expanded && 'line-clamp-4')}>{text}</blockquote>
       {long && (
         <button
           type="button"
           onClick={() => setExpanded((x) => !x)}
           aria-expanded={expanded}
-          className="mt-1 self-start rounded text-sm font-medium text-brand-500 hover:underline"
+          className="mt-1 self-start rounded text-xs font-medium text-brand-500 hover:underline"
         >
           {expanded ? 'Ver menos' : 'Ver más'}
         </button>
       )}
-      <figcaption className="mt-auto flex items-center gap-3 pt-4">
-        <Avatar name={review.authorName} src={review.authorPhotoUrl} />
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-ink-800">{author}</span>
-          {review.relativeTime && <span className="block text-xs text-ink-500">{review.relativeTime}</span>}
-        </span>
-      </figcaption>
+      {review.relativeTime && <figcaption className="mt-auto pt-3 text-xs text-ink-400">{review.relativeTime}</figcaption>}
     </figure>
-  );
-}
-
-function Avatar({ name, src }: { name: string; src: string | null }) {
-  const [broken, setBroken] = useState(false);
-  if (src && !broken) {
-    return (
-      <img
-        src={src}
-        alt=""
-        width={36}
-        height={36}
-        loading="lazy"
-        referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
-        className="size-9 shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-  return (
-    <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-600">
-      {name.trim()[0]?.toUpperCase() ?? '?'}
-    </span>
   );
 }
