@@ -3,6 +3,7 @@ import { ApiError, request, tokens } from '../api/client';
 import { shopApi } from '../api/shopApi';
 import type { User } from '../api/types';
 import { setGuestToken } from './cartSlice';
+import { safeReturnTo } from '../lib/returnTo';
 
 /**
  * Sesión del cliente con SuperTokens en modo header:
@@ -141,7 +142,7 @@ export async function startGoogleSignIn(returnTo = '/') {
     throw new ApiError('El inicio de sesión con Google no está disponible.', 500);
   }
   const state = crypto.randomUUID();
-  const saved: GoogleState = { state, pkceCodeVerifier: res.pkceCodeVerifier, returnTo };
+  const saved: GoogleState = { state, pkceCodeVerifier: res.pkceCodeVerifier, returnTo: safeReturnTo(returnTo) };
   sessionStorage.setItem(GOOGLE_KEY, JSON.stringify(saved));
   const url = new URL(res.urlWithQueryParams);
   url.searchParams.set('state', state);
@@ -180,7 +181,7 @@ export const finishGoogleSignIn = createAsyncThunk<{ user: User; returnTo: strin
         },
       });
       const user = await finishLogin(res, 'No se pudo ingresar con Google.', getState, dispatch);
-      return { user, returnTo: saved.returnTo || '/' };
+      return { user, returnTo: safeReturnTo(saved.returnTo) };
     } catch (e) {
       tokens.clear();
       return rejectWithValue(rejectMsg(e, 'No se pudo ingresar con Google.'));

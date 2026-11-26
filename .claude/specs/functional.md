@@ -68,7 +68,7 @@ El layout debe mantenerse utilizable en móvil y escritorio. Los banners públic
 ## 6. Autenticación y cuenta
 
 - SuperTokens en modo header; mecanismos email/contraseña, registro, Google ThirdParty, verificación de email, recuperación/restablecimiento de contraseña y cierre de sesión.
-- Google OAuth almacena temporalmente `state`, `pkceCodeVerifier` y `returnTo` en `sessionStorage`; callback comprueba `state` antes de llamar a signinup.
+- Google OAuth almacena temporalmente `state`, `pkceCodeVerifier` y `returnTo` en `sessionStorage`; callback comprueba `state` antes de llamar a signinup. `returnTo`/`location.state.from` se normalizan a rutas internas para evitar redirecciones abiertas.
 - Al autenticarse se consulta `/user/me`; al iniciar la app se restaura sesión si existen tokens. El cliente HTTP gestiona renovación y sesión expirada.
 - `RequireAuth` protege cuenta/subrutas; las páginas guardan o recuperan la ruta a la que volver tras login.
 - Cuenta permite ver perfil, verificar email y reenviar correo de verificación. No se identificó edición de nombre/email ni cambio directo de contraseña en la UI; recuperar contraseña es el flujo disponible.
