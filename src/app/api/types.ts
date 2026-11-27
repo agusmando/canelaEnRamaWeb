@@ -348,6 +348,21 @@ export interface ShippingConfig {
   pickup: { name: string; address: string };
 }
 
+/** `GET /settings/hours` (público): franjas de atención por día (0=Lunes … 6=Domingo). */
+export interface BusinessHourRange {
+  open: string;
+  close: string;
+}
+export interface BusinessHour {
+  day: number;
+  closed: boolean;
+  ranges: BusinessHourRange[];
+}
+export interface BusinessHours {
+  hours: BusinessHour[];
+  updatedAt: ISODate | null;
+}
+
 /** Domicilio de entrega guardado del cliente (`GET|PUT /shipping/address`). */
 export interface UserAddress {
   id: Id;

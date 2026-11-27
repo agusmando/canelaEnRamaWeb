@@ -26,7 +26,7 @@ Todas las rutas están anidadas en `StoreLayout`. La home carga de forma inmedia
 | `/mi-cuenta/domicilio` | Consulta/edita domicilio del usuario. |
 | `/mi-cuenta/pedidos` | Lista paginada de pedidos propios. |
 | `/mi-cuenta/pedidos/:id` | Detalle de pedido, líneas, estados separados, pago, envío/eventos/tracking; cancelar si el pedido está en estado elegible, sincronizar pago y volver a comprar según disponibilidad. |
-| `/contacto` | Datos de contacto, redes sociales y mapa. |
+| `/contacto` | Datos de contacto, redes sociales, mapa y horarios de atención (`GET /settings/hours`, editable desde el panel). |
 | `/envios` | Información sobre compra, entrega, retiro, zonas (con precio y ETA desde `/shipping/config`), pagos y enlace a seguimiento. Parte de la información es contenido estático; consultar configuración de API para disponibilidad/costo efectivo. |
 | `/seguimiento`, `/seguimiento/:code` | Formulario de código y cronología pública de envío. |
 | `*` | Página no encontrada. |

@@ -1,12 +1,14 @@
 import { Clock, Facebook, Instagram, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { useBusinessHoursQuery } from '../api/shopApi';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { CONTACT, whatsappLink } from '../lib/contact';
+import { CONTACT, formatBusinessHours, whatsappLink } from '../lib/contact';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Contact() {
   useDocumentTitle('Contacto', {
     description: 'Contactá a Canela en Rama: Colombia 1268, Godoy Cruz, Mendoza. WhatsApp, horarios, cómo llegar y redes sociales.',
   });
+  const { data: businessHours } = useBusinessHoursQuery();
   const items = [
     { icon: MapPin, title: 'Visitanos', text: CONTACT.address, href: CONTACT.mapsUrl, cta: 'Cómo llegar' },
     { icon: MessageCircle, title: 'WhatsApp', text: CONTACT.phone, href: whatsappLink('Hola Canela en Rama! Quería hacer una consulta.'), cta: 'Escribinos' },
@@ -37,7 +39,8 @@ export default function Contact() {
             ))}
           </ul>
           <p className="mt-6 flex items-start gap-2 text-sm text-ink-500">
-            <Clock className="mt-0.5 size-4 shrink-0" /> Respondemos mensajes de lunes a sábado en horario comercial.
+            <Clock className="mt-0.5 size-4 shrink-0" />
+            {businessHours?.hours?.length ? `Horarios: ${formatBusinessHours(businessHours.hours)}` : 'Respondemos mensajes de lunes a sábado en horario comercial.'}
           </p>
           <p className="mt-2 flex items-center gap-2 text-sm text-ink-500">
             <Phone className="size-4 shrink-0" /> {CONTACT.phone}

@@ -3,6 +3,7 @@ import { axiosBaseQuery, request, toApiError, type QueryError } from './client';
 import type {
   Banner,
   BannerPlacement,
+  BusinessHours,
   Cart,
   CartLineInput,
   Brand,
@@ -367,6 +368,12 @@ export const shopApi = createApi({
       keepUnusedDataFor: 900,
     }),
 
+    /** Horarios de atención del local (`GET /settings/hours`, público). */
+    businessHours: build.query<BusinessHours, void>({
+      query: () => ({ url: '/settings/hours' }),
+      keepUnusedDataFor: 900,
+    }),
+
     /** Domicilio guardado del usuario (`null` si todavía no cargó uno). */
     myAddress: build.query<UserAddress | null, void>({
       query: () => ({ url: '/shipping/address' }),
@@ -489,6 +496,7 @@ export const {
   useOrderShipmentQuery,
   useTrackShipmentQuery,
   useShippingConfigQuery,
+  useBusinessHoursQuery,
   useMyAddressQuery,
   useSaveAddressMutation,
   useShippingQuoteQuery,
