@@ -29,6 +29,7 @@ import {
   priceUnitLabel,
   productImages,
   quote,
+  toPriceUnits,
   selectOffer,
   slugify,
   webVariants,
@@ -125,6 +126,9 @@ function ProductView({ product }: { product: Product }) {
   const available = !!variant && inStock(variant) && maxQty > 0;
   const q = variant ? quote(variant, loose ? null : pack, qty, product) : null;
   const saving = q ? q.list - q.total : 0;
+  // Precio equivalente por unidad de medida de toda la selección (sirve para comparar presentaciones a granel).
+  const priceUnits = q && variant ? toPriceUnits(q.stockUnits, variant.contentMeasure) : 0;
+  const perMeasure = q && priceUnits > 0 && (variant?.contentMeasure === 'KG' || variant?.contentMeasure === 'G') ? q.total / priceUnits : 0;
 
   const add = async () => {
     if (!variant) return;
@@ -259,6 +263,11 @@ function ProductView({ product }: { product: Product }) {
                           <span className="text-ink-400 line-through tabular-nums">{formatCurrency(q?.list)}</span>
                           <span className="text-sm font-medium text-leaf-600">Ahorrás {formatCurrency(saving)}</span>
                         </>
+                      )}
+                      {perMeasure > 0 && (
+                        <span className="text-sm text-ink-400 tabular-nums">
+                          ≈ {formatCurrency(perMeasure)} / {priceUnitLabel(variant?.contentMeasure)}
+                        </span>
                       )}
                     </p>
                   </div>

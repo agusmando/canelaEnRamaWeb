@@ -6,16 +6,16 @@ Tienda online pública SPA para explorar productos, administrar un carrito, aute
 
 ## 2. Rutas y capacidades
 
-Todas las rutas están anidadas en `StoreLayout`. La home carga de forma inmediata; otras pantallas se cargan de manera diferida. El árbol de `mi-cuenta` está protegido por `RequireAuth`. El carrito es visible sin login, pero el checkout exige sesión.
+Todas las rutas están anidadas en `StoreLayout`. La home carga de forma inmediata; otras pantallas se cargan de manera diferida. El árbol de `mi-cuenta` está protegido por `RequireAuth`. El carrito y el checkout de retiro en el local están disponibles sin login; el envío a domicilio y el pago online exigen sesión.
 
 | Ruta | Capacidades implementadas |
 |---|---|
-| `/` | Carrusel/hero, productos destacados y ofertas o novedades, categorías, recomendaciones, vistos recientemente, beneficios del comercio y reseñas de Google. |
+| `/` | Carrusel/hero, productos destacados y ofertas o novedades, "Para vos" (solo logueados: categorías/marcas/etiquetas de sus compras, excluye lo ya comprado), vistos recientemente, categorías, "Los más pedidos" (`GET /catalog/best-sellers`, ranking real de los últimos 90 días), recomendaciones, beneficios del comercio y reseñas de Google. |
 | `/productos` | Catálogo activo; búsqueda sincronizada con URL, filtros por categoría, etiqueta, marca, precio, promociones y productor local; orden y carga incremental en cliente. |
 | `/producto/:id` | Ficha con galería, variantes, tamaños de paquete y venta por peso/unidad, cantidad, precio/ofertas/stock, favoritos, compartir, reseñas y productos relacionados. Marca el producto como visto recientemente. |
 | `/ofertas` | Productos organizados según tipos de oferta, incluidos descuentos y promociones por cantidad. |
 | `/favoritos` | Lista persistida localmente; permite remover y agregar al carrito cuando el producto tiene opción de compra predeterminada. |
-| `/carrito` | Consultar y modificar líneas, eliminar o vaciar, ver cotizaciones/stock/avisos, elegir retiro o entrega, capturar dirección, cotizar envío, elegir pago y crear pedido. Para iniciar checkout se requiere autenticación. |
+| `/carrito` | Consultar y modificar líneas, eliminar o vaciar, ver cotizaciones/stock/avisos, elegir retiro o entrega, capturar dirección, cotizar envío, elegir pago, aplicar cupón y crear pedido. Checkout de invitado disponible para retiro en el local con pago al retirar. |
 | `/login` | Acceso por email/contraseña o Google; recupera el destino `returnTo`; mensajes de error del proveedor en español. |
 | `/registro` | Registro email/contraseña y posterior autenticación; contempla validación y errores de SuperTokens. |
 | `/recuperar` | Solicita por email un token para restablecer contraseña. |
@@ -27,7 +27,7 @@ Todas las rutas están anidadas en `StoreLayout`. La home carga de forma inmedia
 | `/mi-cuenta/pedidos` | Lista paginada de pedidos propios. |
 | `/mi-cuenta/pedidos/:id` | Detalle de pedido, líneas, estados separados, pago, envío/eventos/tracking; cancelar si el pedido está en estado elegible, sincronizar pago y volver a comprar según disponibilidad. |
 | `/contacto` | Datos de contacto, redes sociales y mapa. |
-| `/envios` | Información sobre compra, entrega, retiro, zonas, pagos y enlace a seguimiento. Parte de la información es contenido estático; consultar configuración de API para disponibilidad/costo efectivo. |
+| `/envios` | Información sobre compra, entrega, retiro, zonas (con precio y ETA desde `/shipping/config`), pagos y enlace a seguimiento. Parte de la información es contenido estático; consultar configuración de API para disponibilidad/costo efectivo. |
 | `/seguimiento`, `/seguimiento/:code` | Formulario de código y cronología pública de envío. |
 | `*` | Página no encontrada. |
 
@@ -36,7 +36,7 @@ Todas las rutas están anidadas en `StoreLayout`. La home carga de forma inmedia
 `StoreLayout` incluye barra de anuncio, header adaptable, navegación/categorías, buscador, acceso a favoritos/cuenta/carrito, contenido, footer, panel lateral de carrito y botón flotante de WhatsApp. Componentes comunes implementan:
 
 - Banners e imágenes responsive, categorías y cabeceras de sección.
-- Autocomplete de búsqueda con sugerencias e interacción por teclado.
+- Autocomplete de búsqueda con sugerencias e interacción por teclado; recuerda las últimas búsquedas en `localStorage` (`cer_search_recent`) y se enfoca con `/` o `Ctrl/⌘+K`.
 - Tarjetas y botones de favoritos; agregado rápido al carrito y confirmación en drawer.
 - Selector de variantes, presentaciones, cantidades y progreso hacia ofertas por cantidad.
 - Formularios de cuenta y dirección, controles de cantidad, breadcrumbs y estrellas.
@@ -51,7 +51,7 @@ El layout debe mantenerse utilizable en móvil y escritorio. Los banners públic
 - El detalle de producto se consulta por ID. La UI presenta solo variantes comprables según los criterios del frontend (actividad, disponibilidad web y precio visible positivo, donde aplique).
 - `finalPrice` es el precio de venta del API; la UI no debe intentar reconstruirlo con `price`/`profitMargin`.
 - Lógica en `src/app/lib/shop.ts` formatea y presenta unidades, opciones de paquete y mensajes de oferta. La cotización final del carrito la determina el servidor.
-- Favoritos y máximo 12 productos vistos recientemente se guardan bajo `cer_prefs`; se mantienen sin cuenta y no se sincronizan con backend.
+- Favoritos y máximo 12 productos vistos recientemente se guardan bajo `cer_prefs`. Con sesión iniciada se sincronizan con la cuenta (`GET`/`PUT /user/prefs`): al entrar se descargan y fusionan (unión) con las locales y los cambios se suben con ~1 s de debounce; al cerrar sesión quedan solo las locales.
 - Compartir usa Web Share cuando está disponible y alternativa compatible en el navegador.
 
 ## 5. Carrito y checkout
@@ -61,9 +61,11 @@ El layout debe mantenerse utilizable en móvil y escritorio. Los banners públic
 - Se pueden agregar, actualizar cantidades, quitar líneas y vaciar. Actualizaciones de cantidad son optimistas; al fallar, la caché vuelve a consultarse. Las respuestas viejas no deben sobrescribir una edición más reciente.
 - Una línea representa una variante y `selectedBulkOption`; ventas sueltas y paquetes tienen cantidades semánticamente distintas.
 - El carrito muestra disponibilidad, suficiencia de stock, cotización por línea, subtotal/descuento/total y avisos cuando falta cantidad para alcanzar oferta. No asumir que una vista previa local es total confirmado.
-- Checkout requiere autenticación; selecciona `DELIVERY` o `PICKUP`, guarda/usa domicilio y requiere `paymentType`. En entrega la cotización se solicita al backend y este vuelve a fijar el costo al crear orden.
+- El resumen muestra un aviso de ahorro cuando el backend reporta descuento por ofertas (`summary.discount`) y una sección "Complementá tu compra" con productos afines (misma categoría/etiquetas) que no estén en el carrito.
+- Checkout con sesión: selecciona `DELIVERY` o `PICKUP`, guarda/usa domicilio y requiere `paymentType`. En entrega la cotización se solicita al backend y este vuelve a fijar el costo al crear orden.
+- Checkout de invitado (`POST /order/guest`, solo `PICKUP` + `CASH`): pide nombre, email y teléfono; el backend crea un usuario interno `guest:<hash>` y un envío `PICKUP` con código de seguimiento público. El cliente puede seguir el pedido en `/seguimiento/:code` y recibe los mails de pedido con ese enlace. Envío a domicilio y Mercado Pago siguen requiriendo login.
 - Mercado Pago solo se ofrece si `/payment/config` lo informa habilitado. Al completar pedido se crea preferencia y se redirige a `initPoint`; al regresar se vuelve a sincronizar el pago. Efectivo (`CASH`) y transferencia (`TRANSFER`) se coordinan manualmente; no se ofrecen débito/crédito directos.
-- El checkout no tiene cupones: las ofertas se aplican automáticamente desde el backend.
+- Cupón de descuento: `/discount-code/validate` muestra la vista previa y el código se envía en el checkout (`discountCode`); el descuento final lo calcula el backend.
 
 ## 6. Autenticación y cuenta
 
@@ -96,6 +98,7 @@ El layout debe mantenerse utilizable en móvil y escritorio. Los banners públic
 - Cloudflare Pages Function `/sitemap.xml` lista rutas públicas seleccionadas y productos activos disponibles por API.
 - Function `/producto/:id` sirve HTML de SPA con metadatos/JSON-LD específicos para crawlers y plataformas sociales; conserva fallback SPA si la API falla.
 - `robots.txt` referencia sitemap; `_headers` define políticas/headers estáticos y la respuesta de Functions añade encabezados que no hereda de `public/_headers`.
+- PWA instalable: `manifest.webmanifest` + service worker mínimo (`public/sw.js`, cache-first para assets con hash, network-first para el resto, nunca `/api`), registrado solo en producción desde `main.tsx`.
 
 ## 10. Cobertura API invocada por el cliente
 
@@ -105,7 +108,7 @@ Base path `/api` (la configuración `VITE_API_URL` se define sin añadir `/api`)
 |---|---|
 | `/product`, `/product/:id`, `/category`, `/tag`, `/brand` | Catálogo, ficha y filtros. |
 | `/cart`, `/cart/me`, `/cart/:token` | Carritos, cambios, fusión invitado. |
-| `/order`, `/order/mine`, `/order/:id` | Checkout, lista/detalle/cancelación. |
+| `/order`, `/order/guest`, `/order/mine`, `/order/:id` | Checkout (con sesión e invitado), lista/detalle/cancelación. |
 | `/payment/config`, `/payment/order/:id/preference`, `/payment/order/:id/sync` | Disponibilidad Mercado Pago, preferencia y sincronización. |
 | `/user/me` y endpoints `/auth/*` de SuperTokens | Sesión, email/password, Google, verificación y reset. |
 | `/shipping/config`, `/shipping/address`, `/shipping/quote` | Configuración, domicilio y cotización de envío. |
@@ -119,7 +122,6 @@ Consultar `src/app/api/shopApi.ts`, `src/app/store/authSlice.ts` y `src/app/api/
 ## 11. No funcionalidades / límites
 
 - Sin panel de staff/administración en este repositorio.
-- Sin endpoints de favoritos ni sincronización de preferencias entre dispositivos.
 - Sin gestión de cupones.
 - No se observa API directa para sincronización con transportistas, Google Places, Cloudinary o redes sociales desde el navegador; estas capacidades son mediadas por backend, enlaces o funciones de despliegue.
 - No inferir que el proveedor `uber` está habilitado siempre: depende de configuración y cotización remotas.

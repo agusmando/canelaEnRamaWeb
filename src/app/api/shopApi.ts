@@ -135,6 +135,13 @@ export const shopApi = createApi({
       providesTags: ['Catalog'],
     }),
 
+    /** "Los más pedidos": productos más ordenados en los últimos 90 días (`GET /catalog/best-sellers`). */
+    bestSellers: build.query<Product[], { days?: number; limit?: number } | void>({
+      query: (args) => ({ url: '/catalog/best-sellers', params: args ?? {} }),
+      transformResponse: (raw: Paginated<Product>) => raw.content ?? [],
+      providesTags: ['Catalog'],
+    }),
+
     product: build.query<Product, Id>({
       query: (id) => ({ url: `/product/${id}` }),
       providesTags: (_r, _e, id) => [{ type: 'Product', id }],
@@ -270,6 +277,19 @@ export const shopApi = createApi({
         data: { fromCart: true, paymentType, shippingMethod, ...(discountCode ? { discountCode } : {}) },
       }),
       // El checkout descuenta stock: refrescamos catálogo, carrito y pedidos.
+      invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
+    }),
+
+    /** Checkout sin cuenta: retiro en el local y pago al retirar (Efectivo/Transferencia). */
+    guestCheckout: build.mutation<
+      Order,
+      { sessionId: string; guest: { name: string; email: string; phone: string }; paymentType: PaymentType; discountCode?: string }
+    >({
+      query: ({ sessionId, guest, paymentType, discountCode }) => ({
+        url: '/order/guest',
+        method: 'POST',
+        data: { sessionId, guest, paymentType, shippingMethod: 'PICKUP', ...(discountCode ? { discountCode } : {}) },
+      }),
       invalidatesTags: (_r, error) => (error ? [] : ['Cart', 'Order', 'Catalog', 'Product']),
     }),
 
@@ -448,6 +468,7 @@ export const shopApi = createApi({
 export const {
   useCatalogQuery,
   useCatalogSearchQuery,
+  useBestSellersQuery,
   useLazyCatalogSearchQuery,
   useProductQuery,
   useCategoriesQuery,
@@ -457,6 +478,7 @@ export const {
   useAddToCartMutation,
   useUpdateCartMutation,
   useCheckoutMutation,
+  useGuestCheckoutMutation,
   useValidateCouponMutation,
   usePaymentConfigQuery,
   useCreatePaymentPreferenceMutation,

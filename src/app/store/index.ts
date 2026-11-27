@@ -1,11 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import { useDispatch, useSelector } from 'react-redux';
-import { setSessionExpiredHandler } from '../api/client';
+import { request, setSessionExpiredHandler } from '../api/client';
 import { cartKeyOf, setGuestTokenHandler, shopApi } from '../api/shopApi';
 import authReducer, { sessionExpired } from './authSlice';
 import cartReducer, { persistGuestToken, setGuestToken } from './cartSlice';
-import prefsReducer, { persistPrefs, toggleFavorite } from './prefsSlice';
+import prefsReducer, { hydrate, persistPrefs, toggleFavorite } from './prefsSlice';
+import type { Id } from '../api/types';
 
 export const store = configureStore({
   reducer: {
@@ -28,10 +29,54 @@ setGuestTokenHandler((token) => store.dispatch(setGuestToken(token)));
 
 let prevGuest = store.getState().cart.guestToken;
 let prevPrefs = store.getState().prefs;
+
+// Sync de preferencias con la cuenta: al entrar un usuario se descargan y fusionan
+// (la unión puede tener items solo-locales, así que se re-sube el resultado fusionado);
+// los cambios posteriores se suben con debounce.
+let prefsUser: string | null = null;
+let prefsLoaded = false;
+let prefsSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+const loadPrefs = async (userId: string) => {
+  try {
+    const prefs = await request<{ favorites?: Id[]; recent?: Id[] }>({ url: '/user/prefs' });
+    if (store.getState().auth.user?.supertokensId !== userId) return;
+    store.dispatch(hydrate(prefs));
+  } catch {
+    // Sin conexión o backend viejo: quedan las preferencias locales.
+  } finally {
+    if (store.getState().auth.user?.supertokensId === userId) {
+      prefsLoaded = true;
+      savePrefs();
+    }
+  }
+};
+
+const savePrefs = () => {
+  window.clearTimeout(prefsSaveTimer);
+  prefsSaveTimer = window.setTimeout(() => {
+    const { auth, prefs } = store.getState();
+    if (auth.status !== 'authenticated' || !prefsLoaded) return;
+    request({ url: '/user/prefs', method: 'PUT', data: { favorites: prefs.favorites, recent: prefs.recent } }).catch(
+      () => undefined,
+    );
+  }, 1000);
+};
+
 store.subscribe(() => {
-  const { cart, prefs } = store.getState();
+  const { cart, prefs, auth } = store.getState();
   if (cart.guestToken !== prevGuest) persistGuestToken((prevGuest = cart.guestToken));
-  if (prefs !== prevPrefs) persistPrefs((prevPrefs = prefs));
+  const prefsChanged = prefs !== prevPrefs;
+  if (prefsChanged) persistPrefs((prevPrefs = prefs));
+
+  const uid = auth.status === 'authenticated' ? (auth.user?.supertokensId ?? null) : null;
+  if (uid !== prefsUser) {
+    prefsUser = uid;
+    prefsLoaded = false;
+    window.clearTimeout(prefsSaveTimer);
+    if (uid) void loadPrefs(uid);
+  }
+  if (prefsChanged && uid && prefsLoaded) savePrefs();
 });
 
 export type RootState = ReturnType<typeof store.getState>;

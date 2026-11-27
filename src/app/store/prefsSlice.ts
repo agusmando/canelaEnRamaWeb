@@ -5,7 +5,8 @@ import type { Id } from '../api/types';
  * Preferencias del visitante guardadas en el navegador:
  *   - favoritos (lista de deseos)
  *   - productos vistos recientemente
- * No hay endpoint de favoritos en el backend, así que viven en localStorage.
+ * Viven en localStorage y, con sesión iniciada, se sincronizan con la cuenta
+ * (GET/PUT /user/prefs) — ver `syncPrefs` en store/index.ts.
  */
 const KEY = 'cer_prefs';
 const MAX_RECENT = 12;
@@ -49,8 +50,14 @@ const prefsSlice = createSlice({
       if (state.recent[0] === id) return;
       state.recent = [id, ...state.recent.filter((r) => r !== id)].slice(0, MAX_RECENT);
     },
+    /** Fusiona las preferencias que vienen del servidor (unión, gana el orden del servidor). */
+    hydrate(state, action: PayloadAction<{ favorites?: Id[]; recent?: Id[] }>) {
+      const { favorites = [], recent = [] } = action.payload;
+      state.favorites = [...new Set([...favorites, ...state.favorites])];
+      state.recent = [...new Set([...recent, ...state.recent])].slice(0, MAX_RECENT);
+    },
   },
 });
 
-export const { toggleFavorite, removeFavorite, markViewed } = prefsSlice.actions;
+export const { toggleFavorite, removeFavorite, markViewed, hydrate } = prefsSlice.actions;
 export default prefsSlice.reducer;

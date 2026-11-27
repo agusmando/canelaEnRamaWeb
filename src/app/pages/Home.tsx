@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, CreditCard, Leaf, Store, Truck, WheatOff, Nut, Percent, type LucideIcon } from 'lucide-react';
-import { useBannersQuery, useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
+import { useBannersQuery, useBestSellersQuery, useCatalogQuery, useCategoriesQuery, useMyOrdersQuery } from '../api/shopApi';
 import type { Banner, BannerSize, Product } from '../api/types';
 import { BannerLink, BannerPicture, bannerColors } from '../components/Banner';
 import { GoogleReviewsSection } from '../components/GoogleReviews';
@@ -15,6 +15,7 @@ import { getErrorMessage } from '../api/client';
 import { cn } from '../lib/utils';
 import { cld, cldSrcSet } from '../lib/cloudinary';
 import { useSeo } from '../hooks/useSeo';
+import { useAppSelector } from '../store';
 import { storeJsonLd } from '../lib/seo';
 import { CONTACT } from '../lib/contact';
 import recFrutos from '@/assets/rec-frutos-secos.jpg';
@@ -59,9 +60,13 @@ export default function Home() {
           </section>
         )}
 
+        <ForYou />
+
         <RecentlyViewed className="" />
 
         <CategoryStrip />
+
+        <BestSellers />
 
         <Recommendations />
       </div>
@@ -514,6 +519,74 @@ function Benefits() {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- Recomendaciones por datos
+
+/** "Para vos": categorías, marcas y etiquetas de las compras del usuario logueado. */
+function ForYou() {
+  const authed = useAppSelector((s) => s.auth.status === 'authenticated');
+  const { data: catalog } = useCatalogQuery();
+  const { data: orders } = useMyOrdersQuery({ page: 1, perPage: 20 }, { skip: !authed });
+
+  const picks = useMemo(() => {
+    if (!authed || !catalog?.length || !orders?.content.length) return [];
+    const byId = new Map(catalog.map((p) => [p.id, p]));
+    const bought = new Set<number>();
+    const catW = new Map<number, number>();
+    const tagW = new Map<number, number>();
+    const brandW = new Map<number, number>();
+    for (const o of orders.content) {
+      if (o.status === 'CANCELLED') continue;
+      const seen = new Set<number>();
+      for (const item of o.orderItems ?? []) {
+        const pid = item.productVariant?.product?.id;
+        if (!pid || seen.has(pid)) continue;
+        seen.add(pid);
+        bought.add(pid);
+        const p = byId.get(pid);
+        if (!p) continue;
+        catW.set(p.categoryId, (catW.get(p.categoryId) ?? 0) + 1);
+        if (p.brandId) brandW.set(p.brandId, (brandW.get(p.brandId) ?? 0) + 1);
+        for (const t of p.Tags ?? []) tagW.set(t.id, (tagW.get(t.id) ?? 0) + 1);
+      }
+    }
+    if (!bought.size) return [];
+    const scored = catalog
+      .filter((p) => !bought.has(p.id) && cardPrice(p))
+      .map((p) => ({
+        p,
+        score:
+          (catW.has(p.categoryId) ? 3 : 0) +
+          (p.brandId && brandW.has(p.brandId) ? 1 : 0) +
+          (p.Tags ?? []).reduce((s, t) => s + (tagW.get(t.id) ?? 0), 0),
+      }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || b.p.id - a.p.id)
+      .slice(0, 8)
+      .map((x) => x.p);
+    return scored.length >= 4 ? scored : [];
+  }, [authed, catalog, orders]);
+
+  if (!picks.length) return null;
+  return (
+    <section aria-labelledby="para-vos">
+      <SectionHeader title="Para vos" link={{ to: '/productos', label: 'Ver todos' }} />
+      <ProductGrid products={picks} count={8} />
+    </section>
+  );
+}
+
+/** "Los más pedidos": ranking real de ventas de los últimos 90 días (`GET /catalog/best-sellers`). */
+function BestSellers() {
+  const { data: products, isLoading } = useBestSellersQuery({ days: 90, limit: 12 });
+  if (!isLoading && !products?.length) return null;
+  return (
+    <section aria-labelledby="mas-pedidos">
+      <SectionHeader title="Los más pedidos" link={{ to: '/productos', label: 'Ver todos' }} />
+      <ProductGrid products={products?.slice(0, 8)} loading={isLoading} count={8} />
     </section>
   );
 }

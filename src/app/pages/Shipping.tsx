@@ -1,8 +1,11 @@
 import { Link } from 'react-router';
-import { CalendarClock, CreditCard, MessageCircle, PackageCheck, Store, Truck } from 'lucide-react';
+import { CalendarClock, CreditCard, MapPin, MessageCircle, PackageCheck, Store, Truck } from 'lucide-react';
+import { useShippingConfigQuery } from '../api/shopApi';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { TrackShipmentCta } from '../components/ShipmentTracking';
 import { CONTACT, whatsappLink } from '../lib/contact';
+import { etaLabel } from '../lib/shipments';
+import { formatCurrency } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const STEPS = [
@@ -15,6 +18,8 @@ export default function Shipping() {
   useDocumentTitle('Envíos', {
     description: 'Envíos a domicilio en el Gran Mendoza y retiro sin costo en nuestro local de Godoy Cruz. Zonas, costos y tiempos de entrega.',
   });
+  const { data: config } = useShippingConfigQuery();
+  const zones = config?.zones ?? [];
   return (
     <div className="container-page">
       <Breadcrumbs items={[{ label: 'Envíos' }]} />
@@ -46,6 +51,22 @@ export default function Shipping() {
             <li>El costo depende de la zona y se informa al confirmar el pedido.</li>
             <li>Coordinamos día y franja horaria con vos.</li>
           </ul>
+          {zones.length > 0 && (
+            <ul className="mt-5 divide-y divide-brand-100 rounded-lg border border-brand-100 bg-white/60">
+              {zones.map((z) => (
+                <li key={z.name} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 font-medium text-ink-800">
+                    <MapPin className="size-4 shrink-0 text-brand-500" />
+                    <span className="truncate">{z.name}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3 text-ink-600">
+                    {etaLabel(z.etaMinutes) && <span className="text-xs">{etaLabel(z.etaMinutes)}</span>}
+                    <span className="font-semibold text-ink-800 tabular-nums">{Number(z.price) === 0 ? 'Gratis' : formatCurrency(z.price)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
         <section className="rounded-xl bg-ink-50 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-xl font-semibold text-ink-800">

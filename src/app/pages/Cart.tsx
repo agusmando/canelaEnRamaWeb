@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Clock, CircleCheck, CreditCard, ImageOff, Landmark, Lock, MapPin, ShoppingBag, Store, TicketPercent, Trash2, Truck, Wallet, X, type LucideIcon } from 'lucide-react';
 import {
   useCartQuery,
+  useCatalogQuery,
   useCheckoutMutation,
   useCreatePaymentPreferenceMutation,
+  useGuestCheckoutMutation,
   useMyAddressQuery,
   usePaymentConfigQuery,
   useShippingConfigQuery,
@@ -12,7 +14,7 @@ import {
   useUpdateCartMutation,
   useValidateCouponMutation,
 } from '../api/shopApi';
-import type { CartItem, CouponPreview, PaymentType, ShipmentMethod, ShippingConfig, ShippingQuote, UserAddress } from '../api/types';
+import type { CartItem, CouponPreview, PaymentType, Product, ShipmentMethod, ShippingConfig, ShippingQuote, UserAddress } from '../api/types';
 import { getErrorMessage } from '../api/client';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { QtyStepper } from '../components/QtyStepper';
@@ -22,7 +24,8 @@ import { ActionButton } from '../components/ActionButton';
 import { useAppSelector, useCartKey } from '../store';
 import { COUPON_STORAGE_KEY, PAYMENT_OPTIONS } from '../lib/orders';
 import { SHIPMENT_METHOD, addressArea, addressLine, etaLabel } from '../lib/shipments';
-import { packLabel, stockUnit } from '../lib/shop';
+import { packLabel, stockUnit, cardPrice, productImages } from '../lib/shop';
+import { ProductGrid } from '../components/ProductCard';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { cld } from '../lib/cloudinary';
@@ -80,6 +83,7 @@ export default function Cart() {
   const { data: cart, isLoading, error, refetch, isFetching } = useCartQuery(key);
   const [updateCart] = useUpdateCartMutation();
   const [checkout, { isLoading: placing }] = useCheckoutMutation();
+  const [guestCheckout, { isLoading: placingGuest }] = useGuestCheckoutMutation();
   const [createPreference, { isLoading: redirecting }] = useCreatePaymentPreferenceMutation();
   const { data: paymentConfig } = usePaymentConfigQuery();
   const mpEnabled = paymentConfig?.mercadoPago.enabled ?? false;
@@ -100,8 +104,9 @@ export default function Cart() {
     storeMethod(m);
   };
   const delivery = shippingMethod === 'DELIVERY';
-  // Mercado Pago solo si está configurado; Efectivo / Transferencia solo para retiro en el local
-  const options = PAYMENT_OPTIONS.filter((o) => (o.value === 'MERCADOPAGO' ? mpEnabled : !delivery));
+  // Mercado Pago solo si está configurado; Efectivo / Transferencia solo para retiro en el local.
+  // Invitados: solo retiro en el local pagando al retirar (Efectivo/Transferencia).
+  const options = PAYMENT_OPTIONS.filter((o) => (authed ? (o.value === 'MERCADOPAGO' ? mpEnabled : !delivery) : !delivery && o.value === 'CASH'));
   const payment: PaymentType | null = options.some((o) => o.value === chosen) ? chosen : (options[0]?.value ?? null);
   const [addressOpen, setAddressOpen] = useState(false);
   const closeAddress = useCallback(() => setAddressOpen(false), []);
@@ -200,6 +205,42 @@ export default function Cart() {
     }
   };
 
+  // ---- Checkout de invitado (retiro en el local, pago al retirar)
+  const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' });
+  const [guestErrors, setGuestErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
+  const setGuestField = (field: keyof typeof guestForm) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setGuestForm((f) => ({ ...f, [field]: e.target.value }));
+    setGuestErrors((errs) => ({ ...errs, [field]: undefined }));
+  };
+
+  const finishGuest = async () => {
+    if (!payment || delivery || !key.guest) return;
+    const name = guestForm.name.trim();
+    const email = guestForm.email.trim();
+    const phone = guestForm.phone.trim();
+    const errors: typeof guestErrors = {};
+    if (!name) errors.name = 'Ingresá tu nombre';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Ingresá un email válido';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 15) errors.phone = 'Ingresá un teléfono válido (8 a 15 dígitos)';
+    setGuestErrors(errors);
+    if (Object.values(errors).some(Boolean)) return;
+    try {
+      const order = await guestCheckout({
+        sessionId: key.guest,
+        guest: { name, email, phone },
+        paymentType: payment,
+        ...(coupon ? { discountCode: coupon.code } : {}),
+      }).unwrap();
+      const code = order.shipment?.trackingCode;
+      showSuccess('¡Pedido confirmado! Te avisamos por WhatsApp cuando esté listo para retirar.');
+      navigate(code ? `/seguimiento/${encodeURIComponent(code)}` : '/');
+    } catch (e) {
+      showError(e);
+      refetch();
+    }
+  };
+
   const finish = async () => {
     try {
       if (!payment) return;
@@ -283,6 +324,8 @@ export default function Cart() {
               ))}
             </ul>
 
+            <CartSuggestions items={items} />
+
             <Link to="/productos" className="btn-ghost mt-4 -ml-3 h-10 px-3 text-sm text-brand-500 hover:bg-brand-50 hover:text-brand-600">
               <ArrowLeft className="size-4" /> Seguir comprando
             </Link>
@@ -347,6 +390,12 @@ export default function Cart() {
 
             <div className="rounded-xl border border-ink-200 p-4 min-[375px]:p-5 sm:p-8">
               <h2 className="text-2xl font-semibold text-ink-800">Resumen de la orden</h2>
+              {(cart?.summary.discount ?? 0) > 0 && (
+                <p className="mt-3 flex items-center gap-2 rounded-lg bg-leaf-500/10 px-3 py-2.5 text-sm font-medium text-leaf-600">
+                  <CircleCheck className="size-4 shrink-0" />
+                  Ahorrás {formatCurrency(cart?.summary.discount)} con las ofertas
+                </p>
+              )}
               <dl className={cn('mt-6 space-y-4 text-[17px] transition-opacity', syncing && 'opacity-50')} aria-busy={syncing}>
                 <div className="flex justify-between text-ink-400">
                   <dt>Subtotal</dt>
@@ -436,13 +485,89 @@ export default function Cart() {
                   {payment === 'MERCADOPAGO' ? 'Pagar con Mercado Pago' : 'Finalizar compra'}
                   <ArrowRight className="size-4" />
                 </ActionButton>
-              ) : (
+              ) : delivery ? (
                 <>
                   <Link to="/login" state={{ from: '/carrito' }} className="btn-primary mt-6 h-13 w-full rounded-xl px-3 text-center text-base leading-tight whitespace-normal sm:text-[17px]">
-                    <Lock className="size-4" /> Iniciá sesión para finalizar
+                    <Lock className="size-4" /> Iniciá sesión para envío a domicilio
                   </Link>
-                  <p className="mt-3 text-center text-xs text-ink-500">Tu carrito se guarda: lo vas a encontrar al ingresar.</p>
+                  <button type="button" onClick={() => setShippingMethod('PICKUP')} className="btn-ghost mt-2 h-11 w-full rounded-xl text-sm text-brand-600 hover:bg-brand-50 hover:text-brand-700">
+                    <Store className="size-4" /> Prefiero retirar en el local (sin cargo, sin cuenta)
+                  </button>
+                  <p className="mt-3 text-center text-xs text-ink-500">Como invitado podés retirar tu pedido en el local. Tu carrito se guarda: lo vas a encontrar al ingresar.</p>
                 </>
+              ) : (
+                <div className="mt-6">
+                  <p className="text-sm text-ink-600">
+                    <Store className="mr-1 inline size-4 text-brand-500" />
+                    Retiro en el local · pagás al retirar. Completá tus datos para confirmar:
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label htmlFor="guest-name" className="mb-1.5 block text-sm font-medium text-ink-700">
+                        Nombre <span aria-hidden className="text-brand-500">*</span>
+                      </label>
+                      <input
+                        id="guest-name"
+                        value={guestForm.name}
+                        onChange={setGuestField('name')}
+                        autoComplete="name"
+                        className="field h-11 w-full px-3"
+                        placeholder="Tu nombre"
+                      />
+                      {guestErrors.name && <p className="mt-1 text-sm text-brand-600">{guestErrors.name}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="guest-email" className="mb-1.5 block text-sm font-medium text-ink-700">
+                        Email <span aria-hidden className="text-brand-500">*</span>
+                      </label>
+                      <input
+                        id="guest-email"
+                        type="email"
+                        value={guestForm.email}
+                        onChange={setGuestField('email')}
+                        autoComplete="email"
+                        className="field h-11 w-full px-3"
+                        placeholder="tu@email.com"
+                      />
+                      {guestErrors.email && <p className="mt-1 text-sm text-brand-600">{guestErrors.email}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="guest-phone" className="mb-1.5 block text-sm font-medium text-ink-700">
+                        Teléfono <span aria-hidden className="text-brand-500">*</span>
+                      </label>
+                      <input
+                        id="guest-phone"
+                        type="tel"
+                        value={guestForm.phone}
+                        onChange={setGuestField('phone')}
+                        autoComplete="tel"
+                        className="field h-11 w-full px-3"
+                        placeholder="11 2345 6789"
+                      />
+                      {guestErrors.phone ? (
+                        <p className="mt-1 text-sm text-brand-600">{guestErrors.phone}</p>
+                      ) : (
+                        <p className="mt-1 text-xs text-ink-400">Te avisamos por WhatsApp cuando tu pedido esté listo.</p>
+                      )}
+                    </div>
+                  </div>
+                  <ActionButton
+                    onClick={finishGuest}
+                    loading={placingGuest}
+                    loadingLabel="Confirmando pedido…"
+                    disabled={!payment || !key.guest}
+                    className="btn-primary mt-5 h-13 w-full rounded-xl text-base sm:text-[17px]"
+                  >
+                    Confirmar pedido <ArrowRight className="size-4" />
+                  </ActionButton>
+                  <p className="mt-3 text-center text-xs text-ink-500">
+                    ¿Ya tenés cuenta?{' '}
+                    <Link to="/login" state={{ from: '/carrito' }} className="font-medium text-brand-600 hover:underline">
+                      Iniciá sesión
+                    </Link>{' '}
+                    para pagar online o recibir el pedido a domicilio.
+                  </p>
+                </div>
               )}
               <p className="mt-4 text-center text-xs text-ink-400">
                 {delivery
@@ -638,6 +763,50 @@ function offerHintText(hint: NonNullable<CartItem['quote']['offerHint']>) {
           ? `${formatNumber(Math.round(n * 1000))} g`
           : `${formatNumber(n)} kg`;
   return `Sumá ${amount} más y aprovechá ${hint.label}`;
+}
+
+/** "Complementá tu compra": productos del catálogo afines a los del carrito (misma categoría o etiquetas). */
+function CartSuggestions({ items }: { items: CartItem[] }) {
+  const { data: catalog, isLoading } = useCatalogQuery();
+  const suggestions = useMemo(() => {
+    if (!catalog?.length || !items.length) return [] as Product[];
+    const byId = new Map(catalog.map((p) => [p.id, p]));
+    const inCart = new Set<number>();
+    const catIds = new Set<number>();
+    const tagIds = new Set<number>();
+    for (const it of items) {
+      const pid = it.productVariant?.product?.id;
+      if (pid == null) continue;
+      inCart.add(pid);
+      const p = byId.get(pid);
+      if (!p) continue;
+      if (p.categoryId != null) catIds.add(p.categoryId);
+      for (const t of p.Tags ?? []) tagIds.add(t.id);
+    }
+    return catalog
+      .filter((p) => !inCart.has(p.id) && cardPrice(p))
+      .map((p) => ({
+        p,
+        s: (catIds.has(p.categoryId) ? 3 : 0) + (p.Tags ?? []).filter((t) => tagIds.has(t.id)).length + (productImages(p).length ? 0.5 : 0),
+      }))
+      .filter((x) => x.s >= 1)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 4)
+      .map((x) => x.p);
+  }, [catalog, items]);
+
+  if (!isLoading && suggestions.length === 0) return null;
+  return (
+    <section className="mt-12" aria-labelledby="sugerencias">
+      <h2 id="sugerencias" className="text-xl font-semibold text-ink-800">
+        Complementá tu compra
+      </h2>
+      <p className="mt-1 text-sm text-ink-500">Productos que suelen ir bien con lo que ya elegiste.</p>
+      <div className="mt-5">
+        <ProductGrid products={suggestions} loading={isLoading} count={4} />
+      </div>
+    </section>
+  );
 }
 
 function CartLine({

@@ -1,0 +1,17 @@
+{
+  "name": "Canela en Rama",
+  "short_name": "Canela en Rama",
+  "description": "Almacén natural en Godoy Cruz, Mendoza. Frutos secos, harinas, especias, productos sin TACC y más. Envíos en el Gran Mendoza.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#cc3b1d",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

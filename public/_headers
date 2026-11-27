@@ -15,3 +15,7 @@
 # Los archivos de Vite llevan hash en el nombre: se pueden cachear para siempre
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# El service worker se actualiza solo: nunca cachearlo
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate

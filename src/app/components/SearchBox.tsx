@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { ArrowRight, ImageOff, Search, SearchX, X } from 'lucide-react';
+import { ArrowRight, Clock, ImageOff, Search, SearchX, X } from 'lucide-react';
 import { useCatalogQuery, useCategoriesQuery } from '../api/shopApi';
 import { cardPrice, LOCAL_LABEL, localKind, localSearchText, normalize, productImages, searchScore, searchWords, stem, slugify } from '../lib/shop';
 import { cn, formatCurrency } from '../lib/utils';
@@ -47,6 +47,19 @@ function Highlight({ text, term }: { text: string; term: string }) {
 const isTyping = (el: Element | null) =>
   !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el as HTMLElement).isContentEditable);
 
+const RECENT_KEY = 'cer_search_recent';
+const RECENT_MAX = 6;
+
+function readRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string').slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Buscador del header con sugerencias instantáneas sobre el catálogo. */
 export function SearchBox({ className, onDone, shortcut = false }: { className?: string; onDone?: () => void; shortcut?: boolean }) {
   const navigate = useNavigate();
@@ -57,6 +70,7 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') ?? '');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [recent, setRecent] = useState<string[]>(readRecent);
   const boxRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
@@ -74,10 +88,16 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  // Atajo "/" para enfocar el buscador (solo escritorio)
+  // Atajos para enfocar el buscador: "/" (escritorio) y Ctrl/⌘+K (donde sea)
   useEffect(() => {
     if (!shortcut) return;
     const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && !e.altKey) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        return;
+      }
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isTyping(document.activeElement)) return;
       e.preventDefault();
       inputRef.current?.focus();
@@ -85,6 +105,20 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [shortcut]);
+
+  const remember = (term: string) => {
+    const t = term.trim();
+    if (t.length < 2) return;
+    setRecent((prev) => {
+      const next = [t, ...prev.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, RECENT_MAX);
+      try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+      } catch {
+        /* sin storage: las recientes solo duran la sesión */
+      }
+      return next;
+    });
+  };
 
   const term = q.trim();
   const searching = normalize(term).length >= 2;
@@ -118,9 +152,11 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
   const submit = (e?: React.FormEvent, all = false) => {
     e?.preventDefault();
     if (!all && open && active >= 0 && results[active]) {
+      remember(q);
       navigate(`/producto/${results[active].id}`);
     } else {
       const term = q.trim();
+      if (term) remember(term);
       navigate(term ? `/productos?q=${encodeURIComponent(term)}` : '/productos');
     }
     setOpen(false);
@@ -218,6 +254,30 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
         >
           {showCategories ? (
             <div className="px-4 py-3">
+              {recent.length > 0 && (
+                <div className="pb-3">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-ink-400 uppercase">
+                    <Clock className="size-3.5" /> Búsquedas recientes
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {recent.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setQ(r);
+                          setActive(-1);
+                          inputRef.current?.focus();
+                        }}
+                        className="rounded-full border border-ink-200 px-3 py-1.5 text-sm text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600"
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="text-xs font-semibold tracking-wide text-ink-400 uppercase">Explorá por categoría</p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {categories!.slice(0, 8).map((c) => (
@@ -255,6 +315,7 @@ export function SearchBox({ className, onDone, shortcut = false }: { className?:
                       <Link
                         to={`/producto/${p.id}`}
                         onClick={() => {
+                          remember(q);
                           setOpen(false);
                           onDone?.();
                         }}
